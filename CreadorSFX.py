@@ -250,48 +250,39 @@ MAIN_EXE = "{main_exe}"
 def main():
     import time
     import random
-    
-    # Crear directorio único para evitar conflictos
-    unique_id = str(int(time.time())) + str(random.randint(1000, 9999))
-    extract_dir = os.path.join(tempfile.gettempdir(), f"_sfx_{{unique_id}}")
+    import ctypes
     
     try:
-        # Limpiar directorio anterior si existe
-        if os.path.exists(extract_dir):
-            shutil.rmtree(extract_dir, ignore_errors=True)
-        os.makedirs(extract_dir, exist_ok=True)
-    except:
-        # Fallback a directorio en AppData
-        extract_dir = os.path.join(os.path.expanduser("~"), ".sfx_temp")
-        os.makedirs(extract_dir, exist_ok=True)
-    
-    # Escribir archivos
-    for filename, data in EMBEDDED_FILES.items():
-        filepath = os.path.join(extract_dir, filename)
+        # Crear directorio único para evitar conflictos
+        unique_id = str(int(time.time())) + str(random.randint(1000, 9999))
+        extract_dir = os.path.join(tempfile.gettempdir(), "_sfx_" + unique_id)
+        
         try:
-            with open(filepath, 'wb') as f:
-                f.write(base64.b64decode(data))
+            # Limpiar directorio anterior si existe
+            if os.path.exists(extract_dir):
+                shutil.rmtree(extract_dir, ignore_errors=True)
+            os.makedirs(extract_dir, exist_ok=True)
         except:
-            pass  # Ignorar archivos que no se puedan escribir
-    
-    # Ejecutar TODOS los .exe (primero el principal, luego los demas)
-    main_path = os.path.join(extract_dir, MAIN_EXE)
-    if os.path.exists(main_path):
-        try:
+            # Fallback a directorio en AppData
+            extract_dir = os.path.join(os.path.expanduser("~"), ".sfx_temp")
+            os.makedirs(extract_dir, exist_ok=True)
+        
+        # Escribir archivos
+        for filename, data in EMBEDDED_FILES.items():
+            filepath = os.path.join(extract_dir, filename)
+            try:
+                with open(filepath, 'wb') as f:
+                    f.write(base64.b64decode(data))
+            except:
+                pass  # Ignorar archivos que no se puedan escribir
+        
+        # Ejecutar SOLO el principal (los demas quedan extraidos para uso posterior)
+        main_path = os.path.join(extract_dir, MAIN_EXE)
+        if os.path.exists(main_path):
             subprocess.Popen(main_path, shell=True, cwd=extract_dir)
-        except:
-            pass
-    
-    # Ejecutar los demas .exe
-    for filename in EMBEDDED_FILES.keys():
-        if filename.lower().endswith('.exe') and filename != MAIN_EXE:
-            exe_path = os.path.join(extract_dir, filename)
-            if os.path.exists(exe_path):
-                try:
-                    time.sleep(1)  # Esperar 1 segundo entre ejecuciones
-                    subprocess.Popen(exe_path, shell=True, cwd=extract_dir)
-                except:
-                    pass
+    except Exception as e:
+        # Mostrar error en caso de fallo
+        ctypes.windll.user32.MessageBoxW(0, str(e), "Error SFX", 0)
 
 if __name__ == "__main__":
     main()
