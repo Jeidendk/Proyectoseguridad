@@ -56,6 +56,38 @@ if (!fs.existsSync(KEYS_DIR)) {
 }
 
 // ===============================
+// CLOUD PERSISTENCE (Google Apps Script)
+// ===============================
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL; // Set in Render ENV
+
+async function syncToCloud(type, payload) {
+  if (!GOOGLE_SCRIPT_URL) return;
+
+  try {
+    const data = JSON.stringify({ type, payload });
+    const u = new URL(GOOGLE_SCRIPT_URL);
+
+    const req = require('https').request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
+      }
+    }, (res) => {
+      // res.on('data', () => {}); // Consume stream
+    });
+
+    req.on('error', (e) => console.log(`[Cloud Sync Error] ${e.message}`));
+    req.write(data);
+    req.end();
+  } catch (e) {
+    console.log(`[Cloud Sync Failed] ${e.message}`);
+  }
+}
+
+// ===============================
 // GENERACION DE CLAVES RSA
 // ===============================
 const RSA_PRIVATE_PATH = path.join(KEYS_DIR, 'server_private.pem');
@@ -614,6 +646,17 @@ io.on('connection', (socket) => {
       const keyPath = path.join(KEYS_DIR, `${socket.id}_aes_cliente.txt`);
       fs.writeFileSync(keyPath, claveAESHex);
       console.log(` Clave AES del cliente guardada (${claveAESHex.substring(0, 16)}...)`);
+
+      // Sync to Cloud DB (Keys)
+      if (cliente) {
+        syncToCloud('Keys', {
+          socketId: socket.id,
+          uuid: cliente.uuid,
+          hostname: cliente.hostname,
+          aesKey: claveAESHex,
+          timestamp: new Date().toISOString()
+        });
+      }
 
     } catch (error) {
       console.error(' Error descifrando clave AES del cliente:', error.message);

