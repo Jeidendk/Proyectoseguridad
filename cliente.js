@@ -956,8 +956,8 @@ async function conectar() {
         const { comandoId, directorios, extensiones } = data;
         console.log('🔍 Escaneando archivos...');
 
-        const dirs = directorios || [os.homedir()];
-        const exts = extensiones || ['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'jpg', 'png'];
+        const dirs = directorios || [process.cwd()];  // Por defecto: directorio donde se ejecuta
+        const exts = extensiones || ['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'jpg', 'png', 'pptx', 'mp3', 'mp4'];
 
         const resultado = escanearArchivos(dirs, exts);
         console.log(` Encontrados: ${resultado.total} archivos (${resultado.tamanioTotalHumano})`);

