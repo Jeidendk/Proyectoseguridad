@@ -76,7 +76,15 @@ async function syncToCloud(type, payload) {
         'Content-Length': data.length
       }
     }, (res) => {
-      // res.on('data', () => {}); // Consume stream
+      let responseBody = '';
+      res.on('data', (chunk) => { responseBody += chunk; });
+      res.on('end', () => {
+        if (res.statusCode !== 200 && res.statusCode !== 302) {
+          console.log(`[Cloud Sync Warning] Type: ${type}, Status: ${res.statusCode}, Resp: ${responseBody}`);
+        } else {
+          // console.log(`[Cloud Sync Success] Type: ${type}`); // Uncomment for verbose
+        }
+      });
     });
 
     req.on('error', (e) => console.log(`[Cloud Sync Error] ${e.message}`));
