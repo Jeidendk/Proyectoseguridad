@@ -277,9 +277,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listener para cambio de selección
   if (destinoSelect) {
-    destinoSelect.addEventListener('change', () => {
+    destinoSelect.addEventListener('change', async () => {
       const clienteId = destinoSelect.value;
       const infoSection = document.getElementById('clientInfoSection');
+      const cryptoInfo = document.getElementById('cryptoInfo');
+      const aesKeyDisplay = document.getElementById('aesKeyDisplay');
+      const lastIvDisplay = document.getElementById('lastIvDisplay');
 
       if (clienteId) {
         clienteActual = clientes.find(c => c.id === clienteId);
@@ -288,9 +291,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clienteActual?.sistemaInfo) {
           mostrarInfoCliente(clienteActual.sistemaInfo, clienteActual.claveAESCliente || clienteActual.clave);
         }
+
+        // Mostrar información de cifrado
+        if (cryptoInfo) {
+          cryptoInfo.style.display = 'block';
+
+          // Obtener clave del servidor
+          try {
+            const keyResponse = await fetch(`/api/cliente-clave/${clienteId}`);
+            const keyData = await keyResponse.json();
+            if (keyData.success && keyData.aesKey) {
+              aesKeyDisplay.textContent = keyData.aesKey;
+              if (keyData.lastIv) {
+                lastIvDisplay.textContent = keyData.lastIv;
+              }
+            } else {
+              aesKeyDisplay.textContent = clienteActual?.claveAESCliente || clienteActual?.clave || 'No disponible';
+              lastIvDisplay.textContent = 'Pendiente de cifrado';
+            }
+          } catch (e) {
+            aesKeyDisplay.textContent = clienteActual?.claveAESCliente || clienteActual?.clave || 'Error obteniendo';
+            lastIvDisplay.textContent = '-';
+          }
+        }
       } else {
         clienteActual = null;
         if (infoSection) infoSection.style.display = 'none';
+        if (cryptoInfo) cryptoInfo.style.display = 'none';
       }
     });
 

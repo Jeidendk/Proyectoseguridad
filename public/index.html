@@ -135,6 +135,26 @@
           <form id="comandoForm" style="display:flex; gap:10px;">
             <input type="text" id="comando" class="form-control" placeholder="Ejecutar comando remoto (cmd)...">
           </form>
+
+          <!-- Encryption Info Section -->
+          <div id="cryptoInfo"
+            style="display:none; margin-top:15px; padding:15px; background:#1a1a2e; border-radius:8px; border:1px solid var(--border);">
+            <div style="color:#a0a6b0; font-size:12px; margin-bottom:8px;">🔐 Información de Cifrado</div>
+            <div style="display:grid; gap:10px;">
+              <div>
+                <label style="color:#7e8299; font-size:11px;">CLAVE AES-256:</label>
+                <div id="aesKeyDisplay"
+                  style="font-family:monospace; font-size:11px; color:#50cd89; word-break:break-all; background:#0d1117; padding:8px; border-radius:4px;">
+                  -</div>
+              </div>
+              <div>
+                <label style="color:#7e8299; font-size:11px;">ÚLTIMO IV USADO:</label>
+                <div id="lastIvDisplay"
+                  style="font-family:monospace; font-size:11px; color:#f1bc00; word-break:break-all; background:#0d1117; padding:8px; border-radius:4px;">
+                  -</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- LOGS & RESULT CONTAINER (Side by Side) -->

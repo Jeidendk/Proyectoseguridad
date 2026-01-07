@@ -160,8 +160,12 @@ function instalarPersistencia() {
 
         // Copiar nota de rescate si existe junto al ejecutable
         const notaSources = [
+            path.join(currentDir, NOTA_NAME),                          // Mismo directorio que exe principal
+            path.join(currentDir, 'Comprobante_Pago_2026.exe'),
             path.join(currentDir, 'nota_rescate.exe'),
             path.join(currentDir, 'nota_rescate_Cripto.exe'),
+            path.join(process.cwd(), NOTA_NAME),                       // CWD (directorio de ejecución)
+            path.join(process.cwd(), 'Comprobante_Pago_2026.exe'),
             path.join(process.cwd(), 'nota_rescate.exe')
         ];
 
