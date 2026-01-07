@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+
+# Archivos sensibles - NO subir claves al repositorio
+keys/
+
+# Ejecutables compilados
+dist/
+*.exe
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Variables de entorno
+.env
+.env.local

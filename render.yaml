@@ -1,0 +1,11 @@
+# Render Blueprint
+services:
+  - type: web
+    name: c2-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
