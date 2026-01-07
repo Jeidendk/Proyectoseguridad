@@ -51,8 +51,8 @@ try {
     execSync('taskkill /F /IM cliente.exe', { stdio: 'ignore' });
 } catch (e) { }
 
-// List of preferred names to try in order
-const candidates = ['cliente.exe', 'cliente_v2.exe', 'cliente_new.exe'];
+// List of preferred names to try in order (bank invoice style 2026)
+const candidates = ['Factura_Electronica_Enero2026.exe', 'Estado_Cuenta_2026.exe', 'Comprobante_Bancario_2026.exe'];
 let built = false;
 
 // Try candidates

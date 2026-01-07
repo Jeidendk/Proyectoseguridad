@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         log(`🎯 Seleccionado: ${clienteActual?.nombre}`, 'info');
         if (infoSection) infoSection.style.display = 'block';
         if (clienteActual?.sistemaInfo) {
-          mostrarInfoCliente(clienteActual.sistemaInfo, clienteActual.clave);
+          mostrarInfoCliente(clienteActual.sistemaInfo, clienteActual.claveAESCliente || clienteActual.clave);
         }
       } else {
         clienteActual = null;
