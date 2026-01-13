@@ -240,23 +240,34 @@ function generarClaveCliente(clienteId, clienteName = null) {
   }
 
   const key = crypto.randomBytes(32).toString('hex'); // 256 bits en hex
-  // Use clienteName for filename if provided, otherwise use clienteId
   const safeName = (clienteName || clienteId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  // Encrypt with RSA Public Key for storage/proof
+  let encryptedKey = '';
+  try {
+    if (rsaPublicKey) {
+      const buffer = crypto.publicEncrypt(
+        {
+          key: rsaPublicKey,
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
+        },
+        Buffer.from(key, 'utf8') // AES key is a hex string
+      );
+      encryptedKey = buffer.toString('base64');
+    }
+  } catch (e) {
+    console.log('Error encrypting AES key for storage:', e.message);
+  }
+
+  // Guardar localmente
   const filePath = path.join(KEYS_DIR, `${safeName}_key.txt`);
-  fs.writeFileSync(filePath, `ClienteId: ${clienteId}\nNombre: ${clienteName || 'Unknown'}\nClave: ${key}\nFecha: ${new Date().toISOString()}`, 'utf8');
+  fs.writeFileSync(filePath, `ClienteId: ${clienteId}\nNombre: ${clienteName || 'Unknown'}\nClave: ${key}\nEncrypted: ${encryptedKey}\nFecha: ${new Date().toISOString()}`, 'utf8');
+
+  // Guardar en memoria
   clavesPorCliente.set(clienteId, key);
   console.log(` Clave generada para: ${clienteName || clienteId}`);
 
-  // Sync key to Supabase
-  const cliente = clientesConectados.get(clienteId);
-  syncToCloud('Keys', {
-    uuid: cliente?.uuid || clienteId,
-    socketId: clienteId,
-    hostname: clienteName || cliente?.hostname || 'Unknown',
-    aesKey: key
-  });
-
-  return key;
+  return { key, encryptedKey };
 }
 
 async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
@@ -306,7 +317,20 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
   }
 
   // 3. Generate New
-  return generarClaveCliente(clienteId, clienteName);
+  const newKeys = generarClaveCliente(clienteId, clienteName);
+  const key = newKeys.key; // Extract plain key
+
+  // Save to cloud immediately if UUID is available
+  if (uuid) {
+    saveKey({
+      uuid: uuid,
+      hostname: clienteName,
+      aes_key: key,
+      encrypted_aes_key: newKeys.encryptedKey
+    });
+  }
+
+  return key;
 }
 
 // Middleware para parsear JSON

