@@ -148,91 +148,32 @@ function renderTable() {
 }
 
 function renderRSATab(rsaData) {
+  console.log('Rendering RSA Tab');
   if (!rsaData || !rsaData.publicKey) return '<div class="no-data"><p>No hay claves RSA disponibles</p></div>';
-
-  const params = rsaData.params || {};
 
   return `
     <div style="padding: 20px;">
-      <!-- CrypTool Parameters Section -->
-      <div class="card" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:12px; margin-bottom:20px; color:white;">
-        <h3 style="margin:0 0 15px 0; font-size:18px; display:flex; align-items:center; gap:8px;">
-          <i class="ph ph-key"></i> Parámetros RSA para CrypTool v2
-        </h3>
-        <p style="margin:0 0 15px 0; font-size:13px; opacity:0.9;">
-          Usa estos valores en CrypTool para verificar el cifrado RSA. Padding: <strong>PKCS#1 v1.5</strong>
-        </p>
-        
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;">
-          <!-- N (Módulo) -->
-          <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:8px;">
-            <div style="font-size:12px; opacity:0.8; margin-bottom:5px;">N (Módulo Público)</div>
-            <div style="font-size:11px; font-family:monospace; word-break:break-all; max-height:60px; overflow:auto;">
-              ${params.nHex ? params.nHex.substring(0, 64) + '...' : 'N/A'}
-            </div>
-            <button onclick="copyToClipboard('${params.nHex || ''}')" class="copy-btn" style="margin-top:8px; background:rgba(255,255,255,0.2); border:none; color:white; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
-              <i class="ph ph-copy"></i> Copiar N (Hex)
-            </button>
-          </div>
-          
-          <!-- e (Exponente Público) -->
-          <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:8px;">
-            <div style="font-size:12px; opacity:0.8; margin-bottom:5px;">e (Exponente Público)</div>
-            <div style="font-size:14px; font-family:monospace; font-weight:bold;">
-              ${params.eDecimal || '65537'}
-            </div>
-            <div style="font-size:10px; opacity:0.7; margin-top:4px;">Hex: ${params.eHex || '010001'}</div>
-            <button onclick="copyToClipboard('${params.eDecimal || '65537'}')" class="copy-btn" style="margin-top:8px; background:rgba(255,255,255,0.2); border:none; color:white; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
-              <i class="ph ph-copy"></i> Copiar e
-            </button>
-          </div>
-          
-          <!-- d (Exponente Privado) -->
-          <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:8px;">
-            <div style="font-size:12px; opacity:0.8; margin-bottom:5px;">d (Exponente Privado)</div>
-            <div style="font-size:11px; font-family:monospace; word-break:break-all; max-height:60px; overflow:auto;">
-              ${params.dHex ? params.dHex.substring(0, 64) + '...' : 'N/A'}
-            </div>
-            <button onclick="copyToClipboard('${params.dHex || ''}')" class="copy-btn" style="margin-top:8px; background:rgba(255,255,255,0.2); border:none; color:white; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
-              <i class="ph ph-copy"></i> Copiar d (Hex)
-            </button>
-          </div>
-        </div>
-        
-        <!-- Decimal Values (Full) -->
-        <details style="margin-top:15px;">
-          <summary style="cursor:pointer; font-size:13px; padding:8px; background:rgba(255,255,255,0.1); border-radius:6px;">
-            Ver valores completos (Decimal)
-          </summary>
-          <div style="margin-top:10px; font-size:10px; font-family:monospace; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; word-break:break-all; max-height:200px; overflow:auto;">
-            <strong>N:</strong><br>${params.nDecimal || 'N/A'}<br><br>
-            <strong>e:</strong><br>${params.eDecimal || 'N/A'}<br><br>
-            <strong>d:</strong><br>${params.dDecimal || 'N/A'}
-          </div>
-        </details>
-      </div>
-
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <!-- Public Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA (PEM)</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA</h3>
             <button onclick="copyToClipboard(\`${rsaData.publicKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
-          <pre style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:300px; font-size:11px;">${rsaData.publicKey}</pre>
+          <pre style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.publicKey}</pre>
         </div>
 
         <!-- Private Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA (PEM)</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA</h3>
             <button onclick="copyToClipboard(\`${rsaData.privateKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
-          <pre style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:300px; font-size:11px;">${rsaData.privateKey}</pre>
+          <pre style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.privateKey}</pre>
         </div>
       </div>
     </div>
