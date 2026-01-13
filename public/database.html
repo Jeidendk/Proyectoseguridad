@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C2 Manager | Base de Datos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* Database specific styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .data-table th {
+            background: #1e1e2d;
+            color: #9899ac;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #f1f1f4;
+            color: var(--text-primary);
+        }
+
+        .data-table tr:hover td {
+            background: #f9f9fc;
+        }
+
+        .data-table .mono {
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            color: #50cd89;
+            word-break: break-all;
+            max-width: 200px;
+        }
+
+        .data-table .status-connected {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .data-table .status-disconnected {
+            color: var(--danger);
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f3f6f9;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #e8ebf0;
+        }
+
+        .table-container {
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .stats-mini {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-mini {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-mini-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .stat-mini-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn:hover {
+            background: #2684e5;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .filter-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #e2e5ec;
+            border-radius: 6px;
+            background: #f3f6f9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon">C2</div>
+            <div class="logo-text">
+                <span>C2 Manager</span>
+                <span class="logo-sub">v2.0.0 Pro</span>
+            </div>
+        </div>
+
+        <div class="menu-label">PRINCIPAL</div>
+        <a href="index.html" class="nav-item">
+            <i class="ph ph-squares-four nav-icon"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="consola.html" class="nav-item">
+            <i class="ph ph-terminal-window nav-icon"></i>
+            <span>Consola</span>
+        </a>
+        <a href="database.html" class="nav-item active">
+            <i class="ph ph-database nav-icon"></i>
+            <span>Base de Datos</span>
+        </a>
+
+        <div class="bottom-actions">
+            <div class="nav-item">
+                <i class="ph ph-moon nav-icon"></i>
+                <span>Modo Oscuro</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <!-- HEADER -->
+        <header class="header">
+            <div class="welcome-text">
+                <h1>Base de Datos</h1>
+                <p>Visualiza víctimas, claves y archivos cifrados almacenados en Supabase.</p>
+            </div>
+
+            <div class="actions">
+                <button class="refresh-btn" onclick="refreshData()">
+                    <i class="ph ph-arrows-clockwise"></i> Actualizar
+                </button>
+            </div>
+        </header>
+
+        <!-- STATS -->
+        <div class="stats-mini">
+            <div class="stat-mini">
+                <i class="ph ph-users" style="font-size:24px; color:var(--primary);"></i>
+                <div>
+                    <div class="stat-mini-value" id="statVictims">0</div>
+                    <div class="stat-mini-label">Víctimas</div>
+                </div>
+            </div>
+            <div class="stat-mini">
+                <i class="ph ph-key" style="font-size:24px; color:var(--warning);"></i>
+                <div>
+                    <div class="stat-mini-value" id="statKeys">0</div>
+                    <div class="stat-mini-label">Claves</div>
+                </div>
+            </div>
+            <div class="stat-mini">
+                <i class="ph ph-lock-simple" style="font-size:24px; color:var(--danger);"></i>
+                <div>
+                    <div class="stat-mini-value" id="statEncrypted">0</div>
+                    <div class="stat-mini-label">Archivos Cifrados</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="victims">Víctimas</button>
+            <button class="tab-btn" data-tab="keys">Claves</button>
+            <button class="tab-btn" data-tab="encrypted">Archivos Cifrados</button>
+        </div>
+
+        <!-- FILTER -->
+        <div class="filter-bar">
+            <input type="text" class="filter-input" id="filterInput"
+                placeholder="Filtrar por hostname, UUID, archivo...">
+        </div>
+
+        <!-- TABLE CONTAINER -->
+        <div class="card" style="padding:0; overflow:hidden;">
+            <div class="table-container" id="tableContainer">
+                <!-- Tables will be injected here -->
+            </div>
+        </div>
+
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/database.js"></script>
+</body>
+
+</html>
