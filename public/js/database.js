@@ -247,12 +247,12 @@ function formatDate(dateStr) {
 
 function formatPlatform(platform) {
   if (!platform) return '-';
-  const icons = {
-    'win32': '🪟 Windows',
-    'linux': '🐧 Linux',
-    'darwin': '🍎 macOS'
+  const labels = {
+    'win32': 'Windows',
+    'linux': 'Linux',
+    'darwin': 'macOS'
   };
-  return icons[platform] || platform;
+  return labels[platform] || platform;
 }
 
 function truncate(str, len) {

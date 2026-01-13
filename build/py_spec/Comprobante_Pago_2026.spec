@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['..\\..\\interfazdeaviso_tk.py'],
+    ['..\\..\\interfazdeaviso.py'],
     pathex=[],
     binaries=[],
     datas=[],

