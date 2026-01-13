@@ -214,19 +214,6 @@ const RSA_PRIVATE_PATH = path.join(KEYS_DIR, 'server_private.pem');
 const RSA_PUBLIC_PATH = path.join(KEYS_DIR, 'server_public.pem');
 let rsaPrivateKey = null;
 let rsaPublicKey = null;
-let rsaParams = { n: '', e: '', d: '', nHex: '', eHex: '', dHex: '' }; // For CrypTool
-
-// Helper: Base64URL to Hex
-function base64UrlToHex(base64url) {
-  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-  const buffer = Buffer.from(base64, 'base64');
-  return buffer.toString('hex');
-}
-
-// Helper: Hex to Decimal string (for large numbers)
-function hexToDecimal(hex) {
-  return BigInt('0x' + hex).toString(10);
-}
 
 function generarClavesRSA() {
   if (fs.existsSync(RSA_PRIVATE_PATH) && fs.existsSync(RSA_PUBLIC_PATH)) {
@@ -245,28 +232,6 @@ function generarClavesRSA() {
     fs.writeFileSync(RSA_PUBLIC_PATH, publicKey);
     logServer(' Nuevas claves RSA generadas y guardadas');
   }
-
-  // Extract RSA parameters (n, e, d) for CrypTool verification
-  try {
-    const privateKeyObj = crypto.createPrivateKey(rsaPrivateKey);
-    const jwk = privateKeyObj.export({ format: 'jwk' });
-
-    rsaParams.n = jwk.n;  // Base64URL
-    rsaParams.e = jwk.e;  // Base64URL
-    rsaParams.d = jwk.d;  // Base64URL
-
-    rsaParams.nHex = base64UrlToHex(jwk.n);
-    rsaParams.eHex = base64UrlToHex(jwk.e);
-    rsaParams.dHex = base64UrlToHex(jwk.d);
-
-    rsaParams.nDecimal = hexToDecimal(rsaParams.nHex);
-    rsaParams.eDecimal = hexToDecimal(rsaParams.eHex);
-    rsaParams.dDecimal = hexToDecimal(rsaParams.dHex);
-
-    console.log(' Parametros RSA extraidos para CrypTool');
-  } catch (e) {
-    console.error('Error extrayendo parametros RSA:', e.message);
-  }
 }
 
 function descifrarConRSA(encryptedBase64) {
@@ -275,7 +240,8 @@ function descifrarConRSA(encryptedBase64) {
     const decrypted = crypto.privateDecrypt(
       {
         key: rsaPrivateKey,
-        padding: crypto.constants.RSA_PKCS1_PADDING  // PKCS#1 v1.5 for CrypTool
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: 'sha256'
       },
       buffer
     );
@@ -312,14 +278,14 @@ function generarClaveCliente(clienteId, clienteName = null) {
   const key = crypto.randomBytes(32).toString('hex'); // 256 bits en hex
   const safeName = (clienteName || clienteId).replace(/[^a-zA-Z0-9_-]/g, '_');
 
-  // Encrypt with RSA Public Key for storage/proof (PKCS#1 v1.5 for CrypTool)
+  // Encrypt with RSA Public Key for storage/proof
   let encryptedKey = '';
   try {
     if (rsaPublicKey) {
       const buffer = crypto.publicEncrypt(
         {
           key: rsaPublicKey,
-          padding: crypto.constants.RSA_PKCS1_PADDING  // PKCS#1 v1.5 for CrypTool
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
         },
         Buffer.from(key, 'utf8') // AES key is a hex string
       );
@@ -588,24 +554,12 @@ app.get('/api/db/encrypted', async (req, res) => {
 });
 
 // Get stats summary
-// API Endpoint para obtener claves RSA y parámetros para CrypTool
+// API Endpoint para obtener claves RSA
 app.get('/api/rsa-keys', (req, res) => {
   res.json({
     success: true,
     publicKey: rsaPublicKey,
-    privateKey: rsaPrivateKey,
-    // Parámetros para CrypTool v2
-    params: {
-      n: rsaParams.n,           // Módulo (Base64URL)
-      e: rsaParams.e,           // Exponente público (Base64URL)  
-      d: rsaParams.d,           // Exponente privado (Base64URL)
-      nHex: rsaParams.nHex,     // Módulo (Hexadecimal)
-      eHex: rsaParams.eHex,     // Exponente público (Hex)
-      dHex: rsaParams.dHex,     // Exponente privado (Hex)
-      nDecimal: rsaParams.nDecimal,  // Módulo (Decimal)
-      eDecimal: rsaParams.eDecimal,  // Exponente público (Decimal) - Típicamente 65537
-      dDecimal: rsaParams.dDecimal   // Exponente privado (Decimal)
-    }
+    privateKey: rsaPrivateKey
   });
 });
 
