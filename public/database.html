@@ -151,109 +151,122 @@
             border-radius: 6px;
             background: #f3f6f9;
         }
+
+        /* Action Buttons */
+        .copy-btn {
+            background: transparent;
+            border: 1px solid #e2e5ec;
+            border-radius: 6px;
+            padding: 4px 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(54, 153, 255, 0.1);
+        }
+
+        .action-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            color: #b5b5c3;
+            transition: all 0.2s;
+            margin-left: 4px;
+        }
+
+        .action-btn:hover {
+            color: var(--dark);
+            background: #f3f6f9;
+        }
+
+        .action-btn.edit:hover {
+            color: var(--warning);
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .action-btn.delete:hover {
+            color: var(--danger);
+            background: rgba(246, 78, 96, 0.1);
+        }
     </style>
+
 </head>
 
 <body>
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div class="logo-area">
-            <div class="logo-icon">C2</div>
-            <div class="logo-text">
-                <span>C2 Manager</span>
-                <span class="logo-sub">v2.0.0 Pro</span>
+    < !-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon">C2</div>
+                <div class="logo-text"><span>C2 Manager</span><span class="logo-sub">v2.0.0 Pro</span></div>
             </div>
-        </div>
-
-        <div class="menu-label">PRINCIPAL</div>
-        <a href="index.html" class="nav-item">
-            <i class="ph ph-squares-four nav-icon"></i>
-            <span>Dashboard</span>
-        </a>
-        <a href="consola.html" class="nav-item">
-            <i class="ph ph-terminal-window nav-icon"></i>
-            <span>Consola</span>
-        </a>
-        <a href="database.html" class="nav-item active">
-            <i class="ph ph-database nav-icon"></i>
-            <span>Base de Datos</span>
-        </a>
-
-        <div class="bottom-actions">
-            <div class="nav-item">
-                <i class="ph ph-moon nav-icon"></i>
-                <span>Modo Oscuro</span>
+            <div class="menu-label">PRINCIPAL</div><a href="index.html" class="nav-item"><i
+                    class="ph ph-squares-four nav-icon"></i><span>Dashboard</span></a><a href="consola.html"
+                class="nav-item"><i class="ph ph-terminal-window nav-icon"></i><span>Consola</span></a><a
+                href="database.html" class="nav-item active"><i class="ph ph-database nav-icon"></i><span>Base de
+                    Datos</span></a>
+            <div class="bottom-actions">
+                <div class="nav-item"><i class="ph ph-moon nav-icon"></i><span>Modo Oscuro</span></div>
             </div>
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-
-        <!-- HEADER -->
-        <header class="header">
-            <div class="welcome-text">
-                <h1>Base de Datos</h1>
-                <p>Visualiza víctimas, claves y archivos cifrados almacenados en Supabase.</p>
-            </div>
-
-            <div class="actions">
-                <button class="refresh-btn" onclick="refreshData()">
-                    <i class="ph ph-arrows-clockwise"></i> Actualizar
-                </button>
-            </div>
-        </header>
-
-        <!-- STATS -->
-        <div class="stats-mini">
-            <div class="stat-mini">
-                <i class="ph ph-users" style="font-size:24px; color:var(--primary);"></i>
-                <div>
-                    <div class="stat-mini-value" id="statVictims">0</div>
-                    <div class="stat-mini-label">Víctimas</div>
-                </div>
-            </div>
-            <div class="stat-mini">
-                <i class="ph ph-key" style="font-size:24px; color:var(--warning);"></i>
-                <div>
-                    <div class="stat-mini-value" id="statKeys">0</div>
-                    <div class="stat-mini-label">Claves</div>
-                </div>
-            </div>
-            <div class="stat-mini">
-                <i class="ph ph-lock-simple" style="font-size:24px; color:var(--danger);"></i>
-                <div>
-                    <div class="stat-mini-value" id="statEncrypted">0</div>
-                    <div class="stat-mini-label">Archivos Cifrados</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TABS -->
-        <div class="tab-buttons">
-            <button class="tab-btn active" data-tab="victims">Víctimas</button>
-            <button class="tab-btn" data-tab="keys">Claves</button>
-            <button class="tab-btn" data-tab="encrypted">Archivos Cifrados</button>
-        </div>
-
-        <!-- FILTER -->
-        <div class="filter-bar">
-            <input type="text" class="filter-input" id="filterInput"
-                placeholder="Filtrar por hostname, UUID, archivo...">
-        </div>
-
-        <!-- TABLE CONTAINER -->
-        <div class="card" style="padding:0; overflow:hidden;">
-            <div class="table-container" id="tableContainer">
-                <!-- Tables will be injected here -->
-            </div>
-        </div>
-
-    </main>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="js/database.js"></script>
+        </aside>
+        < !-- MAIN CONTENT -->
+            <main class="main-content">
+                < !-- HEADER -->
+                    <header class="header">
+                        <div class="welcome-text">
+                            <h1>Base de Datos</h1>
+                            <p>Visualiza víctimas,
+                                claves y archivos cifrados almacenados en Supabase.</p>
+                        </div>
+                        <div class="actions"><button class="refresh-btn" onclick="refreshData()"><i
+                                    class="ph ph-arrows-clockwise"></i>Actualizar </button></div>
+                    </header>
+                    < !-- STATS -->
+                        <div class="stats-mini">
+                            <div class="stat-mini"><i class="ph ph-users"
+                                    style="font-size:24px; color:var(--primary);"></i>
+                                <div>
+                                    <div class="stat-mini-value" id="statVictims">0</div>
+                                    <div class="stat-mini-label">Víctimas</div>
+                                </div>
+                            </div>
+                            <div class="stat-mini"><i class="ph ph-key"
+                                    style="font-size:24px; color:var(--warning);"></i>
+                                <div>
+                                    <div class="stat-mini-value" id="statKeys">0</div>
+                                    <div class="stat-mini-label">Claves</div>
+                                </div>
+                            </div>
+                            <div class="stat-mini"><i class="ph ph-lock-simple"
+                                    style="font-size:24px; color:var(--danger);"></i>
+                                <div>
+                                    <div class="stat-mini-value" id="statEncrypted">0</div>
+                                    <div class="stat-mini-label">Archivos Cifrados</div>
+                                </div>
+                            </div>
+                        </div>
+                        < !-- TABS -->
+                            <div class="tab-buttons"><button class="tab-btn active"
+                                    data-tab="victims">Víctimas</button><button class="tab-btn"
+                                    data-tab="keys">Claves</button><button class="tab-btn" data-tab="encrypted">Archivos
+                                    Cifrados</button><button class="tab-btn" data-tab="rsa">Claves RSA</button></div>
+                            < !-- FILTER -->
+                                <div class="filter-bar"><input type="text" class="filter-input" id="filterInput"
+                                        placeholder="Filtrar por hostname, UUID, archivo..."></div>
+                                < !-- TABLE CONTAINER -->
+                                    <div class="card" style="padding:0; overflow:hidden;">
+                                        <div class="table-container" id="tableContainer">
+                                            < !-- Tables will be injected here -->
+                                        </div>
+                                    </div>
+            </main>
+            <script src="/socket.io/socket.io.js"></script>
+            <script src="js/database.js"></script>
 </body>
 
 </html>

