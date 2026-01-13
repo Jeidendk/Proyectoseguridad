@@ -306,12 +306,52 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
   const filePath = path.join(KEYS_DIR, `${safeName}_key.txt`);
 
   if (fs.existsSync(filePath)) {
-    const content = fs.readFileSync(filePath, 'utf8');
+    let content = fs.readFileSync(filePath, 'utf8');
     const match = content.match(/Clave: ([a-f0-9]+)/);
+
     if (match) {
       const key = match[1];
+      let encryptedKey = '';
+      const matchEnc = content.match(/Encrypted: ([a-zA-Z0-9+/=]+)/);
+
+      if (matchEnc) {
+        encryptedKey = matchEnc[1];
+      } else {
+        // Backfill: Encrypt existing key
+        try {
+          if (rsaPublicKey) {
+            const buffer = crypto.publicEncrypt(
+              {
+                key: rsaPublicKey,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
+              },
+              Buffer.from(key, 'utf8')
+            );
+            encryptedKey = buffer.toString('base64');
+
+            // Update local file
+            content += `\nEncrypted: ${encryptedKey}`;
+            fs.writeFileSync(filePath, content);
+            console.log(`[Backfill] Clave cifrada generada y guardada para: ${safeName}`);
+          }
+        } catch (e) {
+          console.log('Error encrypting existing AES key:', e.message);
+        }
+      }
+
       clavesPorCliente.set(clienteId, key);
       console.log(` Clave recuperada localmente para: ${clienteName || clienteId}`);
+
+      // FORCE SYNC TO CLOUD (Correcting the missing data issue)
+      if (uuid) {
+        saveKey({
+          uuid: uuid,
+          hostname: clienteName,
+          aes_key: key,
+          encrypted_aes_key: encryptedKey
+        });
+      }
+
       return key;
     }
   }
