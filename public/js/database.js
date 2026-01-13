@@ -156,7 +156,7 @@ function renderRSATab(rsaData) {
         <!-- Public Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">🔑 Clave Pública RSA</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA</h3>
             <button onclick="copyToClipboard(\`${rsaData.publicKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
@@ -167,7 +167,7 @@ function renderRSATab(rsaData) {
         <!-- Private Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">🔒 Clave Privada RSA</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA</h3>
             <button onclick="copyToClipboard(\`${rsaData.privateKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
@@ -214,12 +214,14 @@ function renderVictimsTable(data) {
             <td class="${row.status === 'connected' ? 'status-connected' : 'status-disconnected'}">${row.status || '-'}</td>
             <td>${formatDate(row.created_at)}</td>
             <td>
-              <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
-                <i class="ph ph-pencil-simple"></i>
-              </button>
-              <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
-                <i class="ph ph-trash"></i>
-              </button>
+              <div class="action-buttons">
+                <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                  <i class="ph ph-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `).join('')}
@@ -250,15 +252,17 @@ function renderKeysTable(data) {
             </td>
             <td>${formatDate(row.created_at)}</td>
             <td>
-              <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave">
-                <i class="ph ph-copy"></i>
-              </button>
-              <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
-                <i class="ph ph-pencil-simple"></i>
-              </button>
-              <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
-                <i class="ph ph-trash"></i>
-              </button>
+              <div class="action-buttons">
+                <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave">
+                  <i class="ph ph-copy"></i>
+                </button>
+                <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                  <i class="ph ph-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `).join('')}
@@ -293,15 +297,17 @@ function renderEncryptedTable(data) {
             <td class="mono" title="${row.iv || ''}">${truncate(row.iv, 16)}</td>
             <td>${formatDate(row.created_at)}</td>
             <td>
-              <button onclick="copyToClipboard('${row.iv}')" class="copy-btn" title="Copiar IV">
-                <i class="ph ph-copy"></i>
-              </button>
-              <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
-                <i class="ph ph-pencil-simple"></i>
-              </button>
-              <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
-                <i class="ph ph-trash"></i>
-              </button>
+              <div class="action-buttons">
+                <button onclick="copyToClipboard('${row.iv}')" class="copy-btn" title="Copiar IV">
+                  <i class="ph ph-copy"></i>
+                </button>
+                <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                  <i class="ph ph-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `).join('')}
