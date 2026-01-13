@@ -220,6 +220,7 @@ function renderEncryptedTable(data) {
           <th onclick="handleSort('directory')" style="cursor:pointer;">Directorio ${getSortIcon('directory')}</th>
           <th onclick="handleSort('iv')" style="cursor:pointer;">IV ${getSortIcon('iv')}</th>
           <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -232,6 +233,11 @@ function renderEncryptedTable(data) {
             <td title="${row.directory || ''}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;">${truncate(row.directory, 30)}</td>
             <td class="mono" title="${row.iv || ''}">${truncate(row.iv, 16)}</td>
             <td>${formatDate(row.created_at)}</td>
+            <td>
+              <button onclick="copyToClipboard('${row.iv}')" class="copy-btn" title="Copiar IV">
+                <i class="ph ph-copy"></i>
+              </button>
+            </td>
           </tr>
         `).join('')}
       </tbody>

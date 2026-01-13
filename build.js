@@ -80,7 +80,7 @@ function runBuild(filename) {
     }
 
     // Copiar recursos adicionales a dist/
-    const recursos = ['escudo.png', 'adobe_icon.ico', 'adobe_icon.png'];
+    const recursos = ['escudo.png'];
     for (const recurso of recursos) {
         if (fs.existsSync(recurso)) {
             try {

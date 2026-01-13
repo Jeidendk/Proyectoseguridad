@@ -246,6 +246,16 @@ function generarClaveCliente(clienteId, clienteName = null) {
   fs.writeFileSync(filePath, `ClienteId: ${clienteId}\nNombre: ${clienteName || 'Unknown'}\nClave: ${key}\nFecha: ${new Date().toISOString()}`, 'utf8');
   clavesPorCliente.set(clienteId, key);
   console.log(` Clave generada para: ${clienteName || clienteId}`);
+
+  // Sync key to Supabase
+  const cliente = clientesConectados.get(clienteId);
+  syncToCloud('Keys', {
+    uuid: cliente?.uuid || clienteId,
+    socketId: clienteId,
+    hostname: clienteName || cliente?.hostname || 'Unknown',
+    aesKey: key
+  });
+
   return key;
 }
 
