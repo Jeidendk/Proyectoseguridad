@@ -105,10 +105,17 @@
                             opt.textContent = `📡 ${c.hostname} (${c.username}@${c.ip})`;
                             destino.appendChild(opt);
                         });
-                        // Auto-select if only one
-                        if (data.clientes.length === 1) {
+
+                        // Restaurar selección desde localStorage (sincronización con Dashboard)
+                        const savedClientId = localStorage.getItem('selectedClientId');
+                        if (savedClientId && data.clientes.find(c => c.id === savedClientId)) {
+                            destino.value = savedClientId;
+                            selectedClient = data.clientes.find(c => c.id === savedClientId);
+                            appendToTerm('>>> Conectado a: ' + selectedClient.hostname, '#0f0');
+                        } else if (data.clientes.length === 1) {
                             destino.value = data.clientes[0].id;
                             selectedClient = data.clientes[0];
+                            localStorage.setItem('selectedClientId', selectedClient.id);
                             appendToTerm('>>> Conectado a: ' + selectedClient.hostname, '#0f0');
                         }
                     }
@@ -119,6 +126,8 @@
 
             destino.addEventListener('change', async () => {
                 selectedClient = destino.value ? { id: destino.value } : null;
+                // Guardar en localStorage para sincronizar con Dashboard
+                localStorage.setItem('selectedClientId', destino.value || '');
                 if (selectedClient) {
                     appendToTerm(`>>> Target seleccionado: ${destino.options[destino.selectedIndex].text}`, '#0f0');
                 }

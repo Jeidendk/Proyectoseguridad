@@ -250,8 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
       destinoSelect.appendChild(option);
     });
 
-    // Restaurar selección si sigue siendo válida
-    if (valorActual && clientes.find(c => c.id === valorActual)) {
+    // Restaurar selección desde localStorage (sincronización entre páginas)
+    const savedClientId = localStorage.getItem('selectedClientId');
+    if (savedClientId && clientes.find(c => c.id === savedClientId)) {
+      destinoSelect.value = savedClientId;
+      destinoSelect.dispatchEvent(new Event('change'));
+    } else if (valorActual && clientes.find(c => c.id === valorActual)) {
       destinoSelect.value = valorActual;
     }
   }
@@ -282,7 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const infoSection = document.getElementById('clientInfoSection');
       const cryptoInfo = document.getElementById('cryptoInfo');
       const aesKeyDisplay = document.getElementById('aesKeyDisplay');
-      const lastIvDisplay = document.getElementById('lastIvDisplay');
+
+      // Guardar en localStorage para sincronizar con otras páginas
+      localStorage.setItem('selectedClientId', clienteId || '');
 
       if (clienteId) {
         clienteActual = clientes.find(c => c.id === clienteId);
@@ -302,16 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const keyData = await keyResponse.json();
             if (keyData.success && keyData.aesKey) {
               aesKeyDisplay.textContent = keyData.aesKey;
-              if (keyData.lastIv) {
-                lastIvDisplay.textContent = keyData.lastIv;
-              }
             } else {
               aesKeyDisplay.textContent = clienteActual?.claveAESCliente || clienteActual?.clave || 'No disponible';
-              lastIvDisplay.textContent = 'Pendiente de cifrado';
             }
           } catch (e) {
             aesKeyDisplay.textContent = clienteActual?.claveAESCliente || clienteActual?.clave || 'Error obteniendo';
-            lastIvDisplay.textContent = '-';
           }
         }
       } else {
