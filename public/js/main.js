@@ -99,9 +99,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const wsStatus = document.getElementById('wsStatus');
   const clientesStatus = document.getElementById('clientesStatus');
   const activityLog = document.getElementById('activityLog');
+  const statEncrypted = document.getElementById('statEncrypted');
+  const keyStats = document.getElementById('keyStats');
 
   // Carga Inicial
   cargarClientes();
+  cargarEstadisticas();
+
+  // Actualizar estadísticas periódicamente (cada 30 segundos)
+  setInterval(cargarEstadisticas, 30000);
+
+  // ===============================
+  // CARGAR ESTADÍSTICAS DE BD
+  // ===============================
+  async function cargarEstadisticas() {
+    try {
+      const res = await fetch('/api/db/stats');
+      const data = await res.json();
+
+      if (statEncrypted) {
+        statEncrypted.textContent = data.encrypted || 0;
+      }
+      if (keyStats) {
+        keyStats.textContent = data.keys || 0;
+      }
+    } catch (e) {
+      console.error('Error cargando estadísticas:', e);
+    }
+  }
 
   // ===============================
   // REGISTRO DE ACTIVIDAD
