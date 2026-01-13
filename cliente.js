@@ -231,7 +231,7 @@ function cifrarConAES(data, key) {
 function cifrarConRSA(data, publicKey) {
     try {
         const encrypted = crypto.publicEncrypt(
-            { key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+            { key: publicKey, padding: crypto.constants.RSA_PKCS1_PADDING },  // PKCS#1 v1.5 for CrypTool
             Buffer.from(JSON.stringify(data))
         );
         return { encrypted: true, algorithm: 'rsa', data: encrypted.toString('base64') };
