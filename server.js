@@ -110,19 +110,53 @@ async function saveKey(data) {
     return;
   }
   console.log(`[Supabase] Saving key for: ${data.hostname} | UUID: ${data.uuid} | AES: ${data.aes_key ? 'YES' : 'NULL'} | RSA-Enc: ${data.encrypted_aes_key ? 'YES' : 'NULL'}`);
-  try {
-    const { error } = await supabase.from('keys').upsert({
-      uuid: data.uuid,
-      hostname: data.hostname,
-      aes_key: data.aes_key,
-      encrypted_aes_key: data.encrypted_aes_key,
-      created_at: new Date().toISOString()
-    }, { onConflict: 'uuid' });
 
-    if (error) {
-      console.error(`[DB Error] keys upsert: ${error.message}`);
+  try {
+    // Check if key already exists for this UUID
+    const { data: existing, error: selectError } = await supabase
+      .from('keys')
+      .select('id')
+      .eq('uuid', data.uuid)
+      .limit(1)
+      .single();
+
+    if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error(`[DB Error] keys select: ${selectError.message}`);
+      return;
+    }
+
+    if (existing) {
+      // Update existing row
+      const { error: updateError } = await supabase
+        .from('keys')
+        .update({
+          hostname: data.hostname,
+          aes_key: data.aes_key,
+          encrypted_aes_key: data.encrypted_aes_key
+        })
+        .eq('uuid', data.uuid);
+
+      if (updateError) {
+        console.error(`[DB Error] keys update: ${updateError.message}`);
+      } else {
+        console.log(`[Supabase] Key UPDATED successfully for ${data.hostname}`);
+      }
     } else {
-      console.log(`[Supabase] Key saved/updated successfully for ${data.hostname}`);
+      // Insert new row
+      const { error: insertError } = await supabase
+        .from('keys')
+        .insert({
+          uuid: data.uuid,
+          hostname: data.hostname,
+          aes_key: data.aes_key,
+          encrypted_aes_key: data.encrypted_aes_key
+        });
+
+      if (insertError) {
+        console.error(`[DB Error] keys insert: ${insertError.message}`);
+      } else {
+        console.log(`[Supabase] Key INSERTED successfully for ${data.hostname}`);
+      }
     }
   } catch (e) {
     console.error(`[DB Exception] keys: ${e.message}`);
