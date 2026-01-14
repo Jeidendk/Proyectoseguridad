@@ -213,6 +213,37 @@ function renderRSATab(rsaData) {
             </div>
           </div>
         </details>
+        
+        <!-- Sección: Verificar Cifrado AES con RSA -->
+        <div style="margin-top:20px; padding-top:15px; border-top:1px solid #e9ecef;">
+          <h4 style="margin:0 0 10px 0; font-size:14px; color:var(--dark); display:flex; align-items:center; gap:8px;">
+            <i class="ph ph-lock-key" style="color:var(--primary);"></i> Verificar Cifrado RSA
+          </h4>
+          <p style="margin:0 0 12px 0; font-size:10px; color:#666;">
+            Ingresa una clave AES para cifrarla con RSA y comparar con la versión cifrada en la base de datos.
+          </p>
+          
+          <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:end;">
+            <div>
+              <label style="font-size:10px; color:#888; display:block; margin-bottom:4px;">Clave AES (64 caracteres hex)</label>
+              <input type="text" id="aes-key-input" placeholder="Ej: a1b2c3d4e5f6... (64 chars)" 
+                style="width:100%; padding:8px 10px; border:1px solid #e9ecef; border-radius:6px; font-family:monospace; font-size:11px;">
+            </div>
+            <button onclick="encryptAESWithRSA()" class="copy-btn" style="padding:8px 16px;">
+              <i class="ph ph-lock"></i> Cifrar con RSA
+            </button>
+          </div>
+          
+          <div style="margin-top:12px;">
+            <label style="font-size:10px; color:#888; display:block; margin-bottom:4px;">Resultado (Base64) - Compara con "Clave Cifrada" en pestaña Claves</label>
+            <div id="rsa-encrypt-result" style="background:#fff; padding:10px; border-radius:6px; border:1px solid #e9ecef; font-family:monospace; font-size:9px; word-break:break-all; min-height:40px; max-height:80px; overflow:auto; color:#333;">
+              El resultado aparecerá aquí...
+            </div>
+            <button onclick="copyToClipboard(document.getElementById('rsa-encrypt-result').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
+              <i class="ph ph-copy"></i> Copiar Resultado
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Claves PEM -->
@@ -558,9 +589,58 @@ function base64UrlToBigInt(base64url) {
   return BigInt('0x' + hex);
 }
 
+// Encrypt AES key with RSA for verification
+async function encryptAESWithRSA() {
+  try {
+    const aesKeyHex = document.getElementById('aes-key-input')?.value?.trim();
+    const publicPem = document.getElementById('rsa-public-pem')?.textContent || '';
+
+    if (!aesKeyHex) {
+      alert('Ingresa una clave AES (64 caracteres hex)');
+      return;
+    }
+
+    if (aesKeyHex.length !== 64) {
+      alert(`La clave AES debe tener 64 caracteres. Tienes: ${aesKeyHex.length}`);
+      return;
+    }
+
+    if (!publicPem) {
+      alert('No hay clave pública RSA disponible');
+      return;
+    }
+
+    // Convert hex to bytes
+    const aesKeyBytes = new Uint8Array(aesKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+    // Import public key
+    const publicKey = await importRSAPublicKey(publicPem);
+
+    // Encrypt with RSA-OAEP
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'RSA-OAEP' },
+      publicKey,
+      aesKeyBytes
+    );
+
+    // Convert to base64
+    const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+
+    // Display result
+    document.getElementById('rsa-encrypt-result').textContent = encryptedBase64;
+
+    console.log('AES key encrypted successfully');
+
+  } catch (err) {
+    console.error('Error encrypting AES key:', err);
+    document.getElementById('rsa-encrypt-result').textContent = 'Error: ' + err.message;
+  }
+}
+
 // Global functions for onclick handlers
 window.refreshData = refreshData;
 window.handleSort = handleSort;
 window.copyToClipboard = copyToClipboard;
 window.extractRSAParams = extractRSAParams;
 window.downloadKey = downloadKey;
+window.encryptAESWithRSA = encryptAESWithRSA;
