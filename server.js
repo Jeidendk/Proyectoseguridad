@@ -1012,28 +1012,26 @@ io.on('connection', (socket) => {
       timestamp: infoCliente.timestamp
     });
 
-    // Asignar/obtener clave AES para este cliente usando hostname para el nombre del archivo
-    // Ahora es asincrono para consultar Supabase
-    const clave = await obtenerClaveCliente(socket.id, infoCliente.hostname, infoCliente.uuid);
-
-    // Enviar datos de registro incluyendo la clave publica RSA
-    socket.emit('registrado', {
+    // === CIFRADO HIBRIDO REAL ===
+    // PASO 1: Solo enviamos la clave pública RSA al cliente
+    // El cliente generará su propia clave AES y la enviará cifrada con RSA
+    logServer(`[RSA] Enviando clave pública RSA a ${infoCliente.hostname}`);
+    socket.emit('rsa-handshake', {
       clienteId: socket.id,
-      clave,
       rsaPublicKey: rsaPublicKey
     });
 
     // Notificar a todos los clientes web sobre el nuevo cliente
     io.emit('cliente-conectado', infoCliente);
-    logServer(` Cliente registrado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}]`);
+    logServer(` Cliente conectado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}] - Esperando clave AES cifrada...`);
   });
 
-  // Recibir clave AES cifrada del cliente
-  socket.on('clave-aes-cliente', (data) => {
-    console.log(` Clave AES del cliente recibida de ${socket.id}`);
+  // Recibir clave AES cifrada del cliente (PASO 2 del cifrado híbrido)
+  socket.on('clave-aes-cliente', async (data) => {
+    logServer(`[RSA] Clave AES cifrada recibida de ${socket.id}`);
 
     try {
-      // Descifrar la clave AES con RSA privada
+      // PASO 2: Descifrar la clave AES con RSA privada del servidor
       const claveAESBuffer = crypto.privateDecrypt(
         {
           key: rsaPrivateKey,
@@ -1044,32 +1042,45 @@ io.on('connection', (socket) => {
       );
 
       const claveAESHex = claveAESBuffer.toString('hex');
+      logServer(`[RSA] Clave AES descifrada exitosamente: ${claveAESHex.substring(0, 16)}...`);
 
-      // Guardar clave AES del cliente
+      // Guardar clave AES en memoria y cliente
       const cliente = clientesConectados.get(socket.id);
       if (cliente) {
         cliente.claveAESCliente = claveAESHex;
+        clavesPorCliente.set(socket.id, claveAESHex);
         clientesConectados.set(socket.id, cliente);
-      }
 
-      // Guardar en archivo
-      const keyPath = path.join(KEYS_DIR, `${socket.id}_aes_cliente.txt`);
-      fs.writeFileSync(keyPath, claveAESHex);
-      console.log(` Clave AES del cliente guardada (${claveAESHex.substring(0, 16)}...)`);
+        // Guardar en archivo local
+        const safeName = (cliente.hostname || socket.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const keyPath = path.join(KEYS_DIR, `${safeName}_key.txt`);
+        const keyContent = `ClienteId: ${socket.id}\nNombre: ${cliente.hostname || 'Unknown'}\nClave: ${claveAESHex}\nEncrypted: ${data.claveAESCifrada}\nFecha: ${new Date().toISOString()}`;
+        fs.writeFileSync(keyPath, keyContent, 'utf8');
 
-      // Sync to Cloud DB (Keys)
-      if (cliente) {
-        syncToCloud('Keys', {
-          socketId: socket.id,
+        // Guardar en Supabase con clave cifrada
+        await saveKey({
           uuid: cliente.uuid,
           hostname: cliente.hostname,
-          aesKey: claveAESHex,
-          timestamp: new Date().toISOString()
+          aes_key: claveAESHex,
+          encrypted_aes_key: data.claveAESCifrada
         });
+
+        logServer(`[RSA] Handshake completado para ${cliente.hostname} - Comunicación cifrada activa`);
       }
 
+      // PASO 3: Confirmar registro al cliente
+      socket.emit('registrado', {
+        clienteId: socket.id,
+        clave: claveAESHex, // El cliente ya tiene esta clave, solo confirmamos
+        cifradoHibrido: true
+      });
+
     } catch (error) {
-      console.error(' Error descifrando clave AES del cliente:', error.message);
+      console.error('[RSA ERROR] Error descifrando clave AES:', error.message);
+      socket.emit('error-registro', {
+        error: 'No se pudo descifrar la clave AES',
+        details: error.message
+      });
     }
   });
 
