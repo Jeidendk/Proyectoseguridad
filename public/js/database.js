@@ -153,139 +153,27 @@ function renderRSATab(rsaData) {
 
   return `
     <div style="padding: 20px;">
-      <!-- Sección: Parámetros RSA para CrypTool v2 -->
-      <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; margin-bottom:20px; border:1px solid #e9ecef;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-          <h3 style="margin:0; font-size:16px; color:var(--dark); display:flex; align-items:center; gap:8px;">
-            <i class="ph ph-key" style="color:var(--primary);"></i> Parámetros RSA para CrypTool v2
-          </h3>
-          <button onclick="extractRSAParams()" class="copy-btn">
-            <i class="ph ph-magnifying-glass"></i> Extraer
-          </button>
-        </div>
-        <p style="margin:0 0 15px 0; font-size:11px; color:#666;">
-          Usa estos valores en CrypTool para verificar el cifrado RSA. Padding: <strong style="color:var(--primary);">OAEP-SHA256</strong>
-        </p>
-        
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
-          <!-- N (Módulo) -->
-          <div style="background:#fff; padding:12px; border-radius:6px; border:1px solid #e9ecef;">
-            <div style="font-size:10px; color:#888; margin-bottom:5px;">N (Módulo Público)</div>
-            <div id="rsa-n-value" style="font-family:monospace; font-size:9px; color:#333; word-break:break-all; max-height:60px; overflow:auto;">Haz clic en Extraer</div>
-            <button onclick="copyToClipboard(document.getElementById('rsa-n-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
-              <i class="ph ph-copy"></i> Copiar
-            </button>
-          </div>
-          
-          <!-- e (Exponente Público) -->
-          <div style="background:#fff; padding:12px; border-radius:6px; border:1px solid #e9ecef;">
-            <div style="font-size:10px; color:#888; margin-bottom:5px;">e (Exponente Público)</div>
-            <div id="rsa-e-value" style="font-family:monospace; font-size:13px; font-weight:bold; color:var(--dark);">65537</div>
-            <div id="rsa-e-hex" style="font-family:monospace; font-size:10px; color:#888;">Hex: 010001</div>
-            <button onclick="copyToClipboard(document.getElementById('rsa-e-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
-              <i class="ph ph-copy"></i> Copiar
-            </button>
-          </div>
-          
-          <!-- d (Exponente Privado) -->
-          <div style="background:#fff; padding:12px; border-radius:6px; border:1px solid #e9ecef;">
-            <div style="font-size:10px; color:#888; margin-bottom:5px;">d (Exponente Privado)</div>
-            <div id="rsa-d-value" style="font-family:monospace; font-size:9px; color:#c0392b; word-break:break-all; max-height:60px; overflow:auto;">Haz clic en Extraer</div>
-            <button onclick="copyToClipboard(document.getElementById('rsa-d-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
-              <i class="ph ph-copy"></i> Copiar
-            </button>
-          </div>
-        </div>
-        
-        <!-- Valores decimales colapsables -->
-        <details style="margin-top:12px;">
-          <summary style="cursor:pointer; font-size:11px; color:#666;">
-            <i class="ph ph-caret-right"></i> Ver valores decimales completos
-          </summary>
-          <div style="margin-top:8px; display:grid; gap:8px;">
-            <div style="background:#fff; padding:8px; border-radius:4px; border:1px solid #e9ecef;">
-              <div style="font-size:9px; color:#888;">N (Decimal):</div>
-              <div id="rsa-n-decimal" style="font-family:monospace; font-size:8px; color:#333; word-break:break-all; max-height:50px; overflow:auto;">Haz clic en "Extraer"</div>
-            </div>
-            <div style="background:#fff; padding:8px; border-radius:4px; border:1px solid #e9ecef;">
-              <div style="font-size:9px; color:#888;">d (Decimal):</div>
-              <div id="rsa-d-decimal" style="font-family:monospace; font-size:8px; color:#c0392b; word-break:break-all; max-height:50px; overflow:auto;">Requiere clave privada</div>
-            </div>
-          </div>
-        </details>
-        
-        <!-- Sección: Verificar Cifrado/Descifrado RSA -->
-        <div style="margin-top:20px; padding-top:15px; border-top:1px solid #e9ecef;">
-          <h4 style="margin:0 0 10px 0; font-size:14px; color:var(--dark); display:flex; align-items:center; gap:8px;">
-            <i class="ph ph-lock-key" style="color:var(--primary);"></i> Verificar Cifrado RSA
-          </h4>
-          
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-            <!-- Cifrar -->
-            <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e9ecef;">
-              <h5 style="margin:0 0 10px 0; font-size:12px; color:var(--primary);">
-                <i class="ph ph-lock"></i> Cifrar AES → RSA
-              </h5>
-              <label style="font-size:10px; color:#888; display:block; margin-bottom:4px;">Clave AES (64 hex)</label>
-              <input type="text" id="aes-key-input" placeholder="Pega la clave AES aquí..." 
-                style="width:100%; padding:8px; border:1px solid #e9ecef; border-radius:4px; font-family:monospace; font-size:10px; margin-bottom:8px;">
-              <button onclick="encryptAESWithRSA()" class="copy-btn" style="width:100%; padding:8px;">
-                <i class="ph ph-lock"></i> Cifrar
-              </button>
-              <label style="font-size:9px; color:#888; display:block; margin:10px 0 4px 0;">Resultado (Base64):</label>
-              <div id="rsa-encrypt-result" style="background:#f8f9fa; padding:8px; border-radius:4px; font-family:monospace; font-size:8px; word-break:break-all; min-height:50px; max-height:70px; overflow:auto; color:#333;">
-                -
-              </div>
-              <button onclick="copyToClipboard(document.getElementById('rsa-encrypt-result').textContent)" class="copy-btn" style="margin-top:6px; font-size:9px; padding:3px 6px;">
-                <i class="ph ph-copy"></i> Copiar
-              </button>
-            </div>
-            
-            <!-- Descifrar -->
-            <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e9ecef;">
-              <h5 style="margin:0 0 10px 0; font-size:12px; color:#c0392b;">
-                <i class="ph ph-lock-open"></i> Descifrar RSA → AES
-              </h5>
-              <label style="font-size:10px; color:#888; display:block; margin-bottom:4px;">Clave Cifrada (Base64)</label>
-              <input type="text" id="encrypted-aes-input" placeholder="Pega la clave cifrada aquí..." 
-                style="width:100%; padding:8px; border:1px solid #e9ecef; border-radius:4px; font-family:monospace; font-size:10px; margin-bottom:8px;">
-              <button onclick="decryptAESWithRSA()" class="copy-btn" style="width:100%; padding:8px; background:#c0392b;">
-                <i class="ph ph-lock-open"></i> Descifrar
-              </button>
-              <label style="font-size:9px; color:#888; display:block; margin:10px 0 4px 0;">Resultado (AES Hex):</label>
-              <div id="rsa-decrypt-result" style="background:#f8f9fa; padding:8px; border-radius:4px; font-family:monospace; font-size:10px; word-break:break-all; min-height:50px; max-height:70px; overflow:auto; color:#27ae60;">
-                -
-              </div>
-              <button onclick="copyToClipboard(document.getElementById('rsa-decrypt-result').textContent)" class="copy-btn" style="margin-top:6px; font-size:9px; padding:3px 6px;">
-                <i class="ph ph-copy"></i> Copiar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Claves PEM -->
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <!-- Public Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA (PEM)</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA</h3>
             <button onclick="copyToClipboard(\`${rsaData.publicKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
-          <pre id="rsa-public-pem" style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.publicKey}</pre>
+          <pre style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.publicKey}</pre>
         </div>
 
         <!-- Private Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA (PEM)</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA</h3>
             <button onclick="copyToClipboard(\`${rsaData.privateKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
-          <pre id="rsa-private-pem" style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.privateKey}</pre>
+          <pre style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.privateKey}</pre>
         </div>
       </div>
     </div>
@@ -351,7 +239,6 @@ function renderKeysTable(data) {
           <th onclick="handleSort('uuid')" style="cursor:pointer;">UUID ${getSortIcon('uuid')}</th>
           <th onclick="handleSort('hostname')" style="cursor:pointer;">Hostname ${getSortIcon('hostname')}</th>
           <th onclick="handleSort('aes_key')" style="cursor:pointer;">Clave AES-256 ${getSortIcon('aes_key')}</th>
-          <th>Clave Cifrada (RSA)</th>
           <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
           <th>Acciones</th>
         </tr>
@@ -361,25 +248,10 @@ function renderKeysTable(data) {
           <tr>
             <td class="mono" title="${row.uuid || ''}">${truncate(row.uuid, 12)}</td>
             <td><strong>${row.hostname || '-'}</strong></td>
-            <td class="mono" style="max-width:350px;">
+            <td class="mono" style="max-width:400px;">
               <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                 <span style="overflow:hidden; text-overflow:ellipsis;">${row.aes_key || '-'}</span>
               </div>
-            </td>
-            <td class="mono">
-              ${row.encrypted_aes_key ? `
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span title="${row.encrypted_aes_key}" style="color:var(--success); font-size:10px;">
-                    ${truncate(row.encrypted_aes_key, 15)}...
-                  </span>
-                  <button onclick="copyToClipboard('${row.encrypted_aes_key}')" class="copy-btn" title="Copiar Cifrada">
-                    <i class="ph ph-copy"></i>
-                  </button>
-                  <button onclick="downloadKey('${row.hostname}_encrypted.bin', '${row.encrypted_aes_key}')" class="copy-btn" title="Descargar .bin">
-                    <i class="ph ph-download-simple"></i>
-                  </button>
-                </div>
-              ` : '<span style="color:#dcdcdc; font-style:italic;">No cifrada</span>'}
             </td>
             <td>${formatDate(row.created_at)}</td>
             <td>
@@ -387,10 +259,10 @@ function renderKeysTable(data) {
                 <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave AES">
                   <i class="ph ph-copy"></i>
                 </button>
-                <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
+                <button class="action-btn edit" onclick="editKey('${row.uuid}', '${row.aes_key}')" title="Editar">
                   <i class="ph ph-pencil-simple"></i>
                 </button>
-                <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                <button class="action-btn delete" onclick="deleteKey('${row.uuid}')" title="Eliminar">
                   <i class="ph ph-trash"></i>
                 </button>
               </div>
@@ -495,6 +367,64 @@ function copyToClipboard(text) {
   }).catch(err => {
     console.error('Error al copiar:', err);
   });
+}
+
+// ================================
+// Edit and Delete Key Functions
+// ================================
+
+async function editKey(uuid, currentKey) {
+  const newKey = prompt('Editar clave AES (64 caracteres hex):', currentKey);
+  if (newKey === null) return; // Cancelled
+
+  if (newKey.length !== 64) {
+    alert('La clave AES debe tener 64 caracteres hexadecimales');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/db/keys/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid, aes_key: newKey })
+    });
+
+    if (response.ok) {
+      alert('Clave actualizada correctamente');
+      refreshData();
+    } else {
+      const error = await response.json();
+      alert('Error al actualizar: ' + (error.message || 'Error desconocido'));
+    }
+  } catch (err) {
+    console.error('Error updating key:', err);
+    alert('Error de conexión al actualizar');
+  }
+}
+
+async function deleteKey(uuid) {
+  if (!confirm('¿Estás seguro de eliminar esta clave? Esta acción no se puede deshacer.')) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/db/keys/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid })
+    });
+
+    if (response.ok) {
+      alert('Clave eliminada correctamente');
+      refreshData();
+    } else {
+      const error = await response.json();
+      alert('Error al eliminar: ' + (error.message || 'Error desconocido'));
+    }
+  } catch (err) {
+    console.error('Error deleting key:', err);
+    alert('Error de conexión al eliminar');
+  }
 }
 
 // ================================
@@ -708,3 +638,5 @@ window.extractRSAParams = extractRSAParams;
 window.downloadKey = downloadKey;
 window.encryptAESWithRSA = encryptAESWithRSA;
 window.decryptAESWithRSA = decryptAESWithRSA;
+window.editKey = editKey;
+window.deleteKey = deleteKey;
