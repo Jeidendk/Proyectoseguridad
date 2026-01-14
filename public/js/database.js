@@ -153,27 +153,90 @@ function renderRSATab(rsaData) {
 
   return `
     <div style="padding: 20px;">
+      <!-- Sección: Parámetros RSA para CrypTool v2 -->
+      <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:12px; margin-bottom:20px; color:white;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <h3 style="margin:0; font-size:18px; display:flex; align-items:center; gap:10px;">
+            <i class="ph ph-key"></i> Parámetros RSA para CrypTool v2
+          </h3>
+          <button onclick="extractRSAParams()" class="copy-btn" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.3);">
+            <i class="ph ph-magnifying-glass"></i> Extraer Parámetros
+          </button>
+        </div>
+        <p style="margin:0 0 15px 0; font-size:12px; opacity:0.9;">
+          Usa estos valores en CrypTool para verificar el cifrado RSA. Padding: <strong>PKCS#1 v1.5</strong>
+        </p>
+        
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;">
+          <!-- N (Módulo) -->
+          <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px;">
+            <div style="font-size:11px; opacity:0.8; margin-bottom:5px;">N (Módulo Público)</div>
+            <div id="rsa-n-value" style="font-family:monospace; font-size:10px; word-break:break-all; max-height:80px; overflow:auto;">N/A</div>
+            <button onclick="copyToClipboard(document.getElementById('rsa-n-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:10px; padding:4px 8px; background:rgba(255,255,255,0.15); color:white; border:none;">
+              <i class="ph ph-copy"></i> Copiar N (Hex)
+            </button>
+          </div>
+          
+          <!-- e (Exponente Público) -->
+          <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px;">
+            <div style="font-size:11px; opacity:0.8; margin-bottom:5px;">e (Exponente Público)</div>
+            <div id="rsa-e-value" style="font-family:monospace; font-size:14px; font-weight:bold;">65537</div>
+            <div id="rsa-e-hex" style="font-family:monospace; font-size:11px; opacity:0.8;">Hex: 010001</div>
+            <button onclick="copyToClipboard(document.getElementById('rsa-e-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:10px; padding:4px 8px; background:rgba(255,255,255,0.15); color:white; border:none;">
+              <i class="ph ph-copy"></i> Copiar e
+            </button>
+          </div>
+          
+          <!-- d (Exponente Privado) -->
+          <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px;">
+            <div style="font-size:11px; opacity:0.8; margin-bottom:5px;">d (Exponente Privado)</div>
+            <div id="rsa-d-value" style="font-family:monospace; font-size:10px; word-break:break-all; max-height:80px; overflow:auto;">N/A</div>
+            <button onclick="copyToClipboard(document.getElementById('rsa-d-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:10px; padding:4px 8px; background:rgba(255,255,255,0.15); color:white; border:none;">
+              <i class="ph ph-copy"></i> Copiar d (Hex)
+            </button>
+          </div>
+        </div>
+        
+        <!-- Botón ver valores completos -->
+        <details style="margin-top:15px;">
+          <summary style="cursor:pointer; font-size:12px; opacity:0.9;">
+            <i class="ph ph-caret-right"></i> Ver valores completos (Decimal)
+          </summary>
+          <div style="margin-top:10px; display:grid; gap:10px;">
+            <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:6px;">
+              <div style="font-size:10px; opacity:0.7;">N (Decimal):</div>
+              <div id="rsa-n-decimal" style="font-family:monospace; font-size:9px; word-break:break-all; max-height:60px; overflow:auto;">Haz clic en "Extraer Parámetros"</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:6px;">
+              <div style="font-size:10px; opacity:0.7;">d (Decimal):</div>
+              <div id="rsa-d-decimal" style="font-family:monospace; font-size:9px; word-break:break-all; max-height:60px; overflow:auto;">Requiere clave privada</div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Claves PEM -->
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <!-- Public Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Pública RSA (PEM)</h3>
             <button onclick="copyToClipboard(\`${rsaData.publicKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
-          <pre style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.publicKey}</pre>
+          <pre id="rsa-public-pem" style="background:#1e1e2d; color:#50cd89; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.publicKey}</pre>
         </div>
 
         <!-- Private Key -->
         <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; border:1px solid #e9ecef;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA</h3>
+            <h3 style="margin:0; font-size:16px; color:var(--dark);">Clave Privada RSA (PEM)</h3>
             <button onclick="copyToClipboard(\`${rsaData.privateKey}\`)" class="copy-btn">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
-          <pre style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.privateKey}</pre>
+          <pre id="rsa-private-pem" style="background:#1e1e2d; color:#f64e60; padding:15px; border-radius:6px; overflow:auto; max-height:400px; font-size:11px;">${rsaData.privateKey}</pre>
         </div>
       </div>
     </div>
@@ -379,13 +442,125 @@ function truncate(str, len) {
 
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
-    alert('Clave copiada al portapapeles');
+    // No alert for individual copies to avoid popup spam
   }).catch(err => {
     console.error('Error al copiar:', err);
   });
+}
+
+// ================================
+// RSA Parameter Extraction for CrypTool v2
+// ================================
+
+async function extractRSAParams() {
+  try {
+    const publicPem = document.getElementById('rsa-public-pem')?.textContent || '';
+    const privatePem = document.getElementById('rsa-private-pem')?.textContent || '';
+
+    if (!publicPem) {
+      alert('No hay claves RSA disponibles');
+      return;
+    }
+
+    // Parse public key
+    const publicKey = await importRSAPublicKey(publicPem);
+    const exportedPublic = await crypto.subtle.exportKey('jwk', publicKey);
+
+    // Extract N and e from public key
+    const n = base64UrlToHex(exportedPublic.n);
+    const e = base64UrlToHex(exportedPublic.e);
+    const nDecimal = base64UrlToBigInt(exportedPublic.n).toString();
+    const eDecimal = base64UrlToBigInt(exportedPublic.e).toString();
+
+    // Update UI
+    document.getElementById('rsa-n-value').textContent = n;
+    document.getElementById('rsa-n-decimal').textContent = nDecimal;
+    document.getElementById('rsa-e-value').textContent = eDecimal;
+    document.getElementById('rsa-e-hex').textContent = `Hex: ${e}`;
+
+    // Try to parse private key for d
+    if (privatePem) {
+      try {
+        const privateKey = await importRSAPrivateKey(privatePem);
+        const exportedPrivate = await crypto.subtle.exportKey('jwk', privateKey);
+
+        const d = base64UrlToHex(exportedPrivate.d);
+        const dDecimal = base64UrlToBigInt(exportedPrivate.d).toString();
+
+        document.getElementById('rsa-d-value').textContent = d;
+        document.getElementById('rsa-d-decimal').textContent = dDecimal;
+      } catch (privErr) {
+        console.log('Could not extract d from private key:', privErr);
+        document.getElementById('rsa-d-value').textContent = 'Error al extraer';
+      }
+    }
+
+    console.log('RSA Parameters extracted successfully');
+
+  } catch (err) {
+    console.error('Error extracting RSA params:', err);
+    alert('Error al extraer parámetros: ' + err.message);
+  }
+}
+
+async function importRSAPublicKey(pem) {
+  const pemContents = pem
+    .replace(/-----BEGIN PUBLIC KEY-----/, '')
+    .replace(/-----END PUBLIC KEY-----/, '')
+    .replace(/\s/g, '');
+
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  return await crypto.subtle.importKey(
+    'spki',
+    binaryDer.buffer,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    true,
+    ['encrypt']
+  );
+}
+
+async function importRSAPrivateKey(pem) {
+  const pemContents = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/-----BEGIN RSA PRIVATE KEY-----/, '')
+    .replace(/-----END RSA PRIVATE KEY-----/, '')
+    .replace(/\s/g, '');
+
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  return await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer.buffer,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    true,
+    ['decrypt']
+  );
+}
+
+function base64UrlToHex(base64url) {
+  // Convert base64url to base64
+  let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) base64 += '=';
+
+  // Decode and convert to hex
+  const binary = atob(base64);
+  let hex = '';
+  for (let i = 0; i < binary.length; i++) {
+    hex += binary.charCodeAt(i).toString(16).padStart(2, '0');
+  }
+  return hex;
+}
+
+function base64UrlToBigInt(base64url) {
+  const hex = base64UrlToHex(base64url);
+  return BigInt('0x' + hex);
 }
 
 // Global functions for onclick handlers
 window.refreshData = refreshData;
 window.handleSort = handleSort;
 window.copyToClipboard = copyToClipboard;
+window.extractRSAParams = extractRSAParams;
+window.downloadKey = downloadKey;
