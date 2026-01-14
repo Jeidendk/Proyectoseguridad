@@ -145,10 +145,13 @@ class RSAVerificador(QMainWindow):
         # Tab 1: Cifrar/Descifrar
         tabs.addTab(self.create_crypto_tab(), "🔑 Cifrar/Descifrar")
         
-        # Tab 2: Proceso Paso a Paso
+        # Tab 2: CrypTool v2
+        tabs.addTab(self.create_cryptool_tab(), "🧰 CrypTool v2")
+        
+        # Tab 3: Proceso Paso a Paso
         tabs.addTab(self.create_steps_tab(), "📋 Proceso Detallado")
         
-        # Tab 3: Base de Datos
+        # Tab 4: Base de Datos
         tabs.addTab(self.create_db_tab(), "🗄️ Base de Datos")
     
     def create_crypto_tab(self):
@@ -215,6 +218,217 @@ class RSAVerificador(QMainWindow):
         layout.addWidget(result_group)
         
         return widget
+    
+    def create_cryptool_tab(self):
+        """Tab para extraer parámetros RSA compatibles con CrypTool v2"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Instrucciones
+        info = QLabel(
+            "Extrae los parámetros RSA (N, e, d, p, q) de las claves PEM para usar en CrypTool v2.\n"
+            "Pega las claves en la pestaña 'Cifrar/Descifrar' y luego haz clic en 'Extraer Parámetros'."
+        )
+        info.setStyleSheet("color: #888; font-style: italic;")
+        layout.addWidget(info)
+        
+        # Botón extraer
+        extract_btn = QPushButton("🔍 Extraer Parámetros RSA")
+        extract_btn.clicked.connect(self.extract_rsa_params)
+        extract_btn.setStyleSheet("background-color: #9b59b6;")
+        layout.addWidget(extract_btn)
+        
+        # Parámetros en grid
+        params_group = QGroupBox("Parámetros RSA para CrypTool v2")
+        params_layout = QVBoxLayout(params_group)
+        
+        # N (Módulo)
+        n_row = QHBoxLayout()
+        n_row.addWidget(QLabel("N (Módulo Público):"))
+        self.n_decimal = QLineEdit()
+        self.n_decimal.setReadOnly(True)
+        self.n_decimal.setPlaceholderText("Decimal")
+        n_row.addWidget(self.n_decimal)
+        copy_n = QPushButton("📋")
+        copy_n.setFixedWidth(40)
+        copy_n.clicked.connect(lambda: self.copy_to_clipboard(self.n_decimal.text()))
+        n_row.addWidget(copy_n)
+        params_layout.addLayout(n_row)
+        
+        self.n_hex = QLineEdit()
+        self.n_hex.setReadOnly(True)
+        self.n_hex.setPlaceholderText("Hexadecimal (0x...)")
+        params_layout.addWidget(self.n_hex)
+        
+        # e (Exponente Público)
+        e_row = QHBoxLayout()
+        e_row.addWidget(QLabel("e (Exponente Público):"))
+        self.e_decimal = QLineEdit()
+        self.e_decimal.setReadOnly(True)
+        self.e_decimal.setPlaceholderText("Generalmente 65537")
+        e_row.addWidget(self.e_decimal)
+        copy_e = QPushButton("📋")
+        copy_e.setFixedWidth(40)
+        copy_e.clicked.connect(lambda: self.copy_to_clipboard(self.e_decimal.text()))
+        e_row.addWidget(copy_e)
+        params_layout.addLayout(e_row)
+        
+        self.e_hex = QLineEdit()
+        self.e_hex.setReadOnly(True)
+        self.e_hex.setPlaceholderText("Hex: 0x10001")
+        params_layout.addWidget(self.e_hex)
+        
+        # d (Exponente Privado)
+        d_row = QHBoxLayout()
+        d_row.addWidget(QLabel("d (Exponente Privado):"))
+        self.d_decimal = QLineEdit()
+        self.d_decimal.setReadOnly(True)
+        self.d_decimal.setPlaceholderText("Requiere clave privada")
+        d_row.addWidget(self.d_decimal)
+        copy_d = QPushButton("📋")
+        copy_d.setFixedWidth(40)
+        copy_d.clicked.connect(lambda: self.copy_to_clipboard(self.d_decimal.text()))
+        d_row.addWidget(copy_d)
+        params_layout.addLayout(d_row)
+        
+        self.d_hex = QLineEdit()
+        self.d_hex.setReadOnly(True)
+        self.d_hex.setPlaceholderText("Hexadecimal")
+        params_layout.addWidget(self.d_hex)
+        
+        # p y q (Factores primos)
+        pq_row = QHBoxLayout()
+        pq_group = QGroupBox("Factores Primos (p, q)")
+        pq_layout = QVBoxLayout(pq_group)
+        
+        p_row = QHBoxLayout()
+        p_row.addWidget(QLabel("p:"))
+        self.p_value = QLineEdit()
+        self.p_value.setReadOnly(True)
+        p_row.addWidget(self.p_value)
+        pq_layout.addLayout(p_row)
+        
+        q_row = QHBoxLayout()
+        q_row.addWidget(QLabel("q:"))
+        self.q_value = QLineEdit()
+        self.q_value.setReadOnly(True)
+        q_row.addWidget(self.q_value)
+        pq_layout.addLayout(q_row)
+        
+        params_layout.addWidget(pq_group)
+        layout.addWidget(params_group)
+        
+        # Info adicional
+        info_group = QGroupBox("Información de la Clave")
+        info_layout = QVBoxLayout(info_group)
+        self.key_info = QTextEdit()
+        self.key_info.setReadOnly(True)
+        self.key_info.setMaximumHeight(150)
+        info_layout.addWidget(self.key_info)
+        layout.addWidget(info_group)
+        
+        # Botón copiar todo
+        copy_all_btn = QPushButton("📋 Copiar Todo para CrypTool")
+        copy_all_btn.clicked.connect(self.copy_all_params)
+        layout.addWidget(copy_all_btn)
+        
+        return widget
+    
+    def extract_rsa_params(self):
+        """Extrae los parámetros RSA de las claves PEM"""
+        try:
+            info_text = []
+            
+            # Intentar extraer de clave pública
+            pub_pem = self.public_key_edit.toPlainText().strip()
+            if pub_pem:
+                public_key = serialization.load_pem_public_key(
+                    pub_pem.encode(),
+                    backend=default_backend()
+                )
+                pub_numbers = public_key.public_numbers()
+                
+                # N y e
+                n = pub_numbers.n
+                e = pub_numbers.e
+                
+                self.n_decimal.setText(str(n))
+                self.n_hex.setText(hex(n))
+                self.e_decimal.setText(str(e))
+                self.e_hex.setText(hex(e))
+                
+                info_text.append(f"Tamaño de clave: {public_key.key_size} bits")
+                info_text.append(f"Longitud de N: {n.bit_length()} bits")
+                info_text.append(f"Exponente público (e): {e}")
+            
+            # Intentar extraer de clave privada
+            priv_pem = self.private_key_edit.toPlainText().strip()
+            if priv_pem:
+                private_key = serialization.load_pem_private_key(
+                    priv_pem.encode(),
+                    password=None,
+                    backend=default_backend()
+                )
+                priv_numbers = private_key.private_numbers()
+                
+                # d, p, q
+                d = priv_numbers.d
+                p = priv_numbers.p
+                q = priv_numbers.q
+                
+                self.d_decimal.setText(str(d))
+                self.d_hex.setText(hex(d))
+                self.p_value.setText(str(p))
+                self.q_value.setText(str(q))
+                
+                # Si no teníamos la pública, extraer n y e de la privada
+                if not pub_pem:
+                    pub_nums = priv_numbers.public_numbers
+                    self.n_decimal.setText(str(pub_nums.n))
+                    self.n_hex.setText(hex(pub_nums.n))
+                    self.e_decimal.setText(str(pub_nums.e))
+                    self.e_hex.setText(hex(pub_nums.e))
+                
+                info_text.append(f"Longitud de d: {d.bit_length()} bits")
+                info_text.append(f"Longitud de p: {p.bit_length()} bits")
+                info_text.append(f"Longitud de q: {q.bit_length()} bits")
+                info_text.append(f"Verificación: p * q == N: {p * q == priv_numbers.public_numbers.n}")
+            
+            if not pub_pem and not priv_pem:
+                raise ValueError("Ingresa al menos una clave RSA (pública o privada) en la pestaña 'Cifrar/Descifrar'")
+            
+            self.key_info.setText("\n".join(info_text))
+            QMessageBox.information(self, "Éxito", "Parámetros RSA extraídos correctamente.\nPuedes copiarlos para usar en CrypTool v2.")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+    
+    def copy_to_clipboard(self, text):
+        """Copia texto al portapapeles"""
+        if text:
+            QApplication.clipboard().setText(text)
+            # No mostrar mensaje para copias individuales
+    
+    def copy_all_params(self):
+        """Copia todos los parámetros en formato para CrypTool"""
+        params = []
+        params.append("=== Parámetros RSA para CrypTool v2 ===")
+        params.append(f"N (Módulo):\n{self.n_decimal.text()}")
+        params.append(f"\nN (Hex):\n{self.n_hex.text()}")
+        params.append(f"\ne (Exponente Público): {self.e_decimal.text()}")
+        params.append(f"e (Hex): {self.e_hex.text()}")
+        
+        if self.d_decimal.text():
+            params.append(f"\nd (Exponente Privado):\n{self.d_decimal.text()}")
+            params.append(f"\nd (Hex):\n{self.d_hex.text()}")
+        
+        if self.p_value.text():
+            params.append(f"\np (Factor primo):\n{self.p_value.text()}")
+            params.append(f"\nq (Factor primo):\n{self.q_value.text()}")
+        
+        text = "\n".join(params)
+        QApplication.clipboard().setText(text)
+        QMessageBox.information(self, "Copiado", "Todos los parámetros han sido copiados al portapapeles.")
     
     def create_steps_tab(self):
         widget = QWidget()
