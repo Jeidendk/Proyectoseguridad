@@ -154,33 +154,33 @@ function renderRSATab(rsaData) {
   return `
     <div style="padding: 20px;">
       <!-- Sección: Parámetros RSA para CrypTool v2 -->
-      <div class="card" style="background:#1e1e2d; padding:20px; border-radius:8px; margin-bottom:20px; border:1px solid #2d2d3d;">
+      <div class="card" style="background:#f8f9fa; padding:20px; border-radius:8px; margin-bottom:20px; border:1px solid #e9ecef;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-          <h3 style="margin:0; font-size:16px; color:#fff; display:flex; align-items:center; gap:8px;">
+          <h3 style="margin:0; font-size:16px; color:var(--dark); display:flex; align-items:center; gap:8px;">
             <i class="ph ph-key" style="color:var(--primary);"></i> Parámetros RSA para CrypTool v2
           </h3>
           <button onclick="extractRSAParams()" class="copy-btn">
             <i class="ph ph-magnifying-glass"></i> Extraer
           </button>
         </div>
-        <p style="margin:0 0 15px 0; font-size:11px; color:#888;">
-          Usa estos valores en CrypTool para verificar el cifrado RSA. Padding: <strong style="color:#50cd89;">PKCS#1 v1.5</strong>
+        <p style="margin:0 0 15px 0; font-size:11px; color:#666;">
+          Usa estos valores en CrypTool para verificar el cifrado RSA. Padding: <strong style="color:var(--primary);">OAEP-SHA256</strong>
         </p>
         
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
           <!-- N (Módulo) -->
-          <div style="background:#16213e; padding:12px; border-radius:6px; border:1px solid #2d2d3d;">
+          <div style="background:#fff; padding:12px; border-radius:6px; border:1px solid #e9ecef;">
             <div style="font-size:10px; color:#888; margin-bottom:5px;">N (Módulo Público)</div>
-            <div id="rsa-n-value" style="font-family:monospace; font-size:9px; color:#50cd89; word-break:break-all; max-height:60px; overflow:auto;">N/A</div>
+            <div id="rsa-n-value" style="font-family:monospace; font-size:9px; color:#333; word-break:break-all; max-height:60px; overflow:auto;">Haz clic en Extraer</div>
             <button onclick="copyToClipboard(document.getElementById('rsa-n-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
               <i class="ph ph-copy"></i> Copiar
             </button>
           </div>
           
           <!-- e (Exponente Público) -->
-          <div style="background:#16213e; padding:12px; border-radius:6px; border:1px solid #2d2d3d;">
+          <div style="background:#fff; padding:12px; border-radius:6px; border:1px solid #e9ecef;">
             <div style="font-size:10px; color:#888; margin-bottom:5px;">e (Exponente Público)</div>
-            <div id="rsa-e-value" style="font-family:monospace; font-size:13px; font-weight:bold; color:#fff;">65537</div>
+            <div id="rsa-e-value" style="font-family:monospace; font-size:13px; font-weight:bold; color:var(--dark);">65537</div>
             <div id="rsa-e-hex" style="font-family:monospace; font-size:10px; color:#888;">Hex: 010001</div>
             <button onclick="copyToClipboard(document.getElementById('rsa-e-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
               <i class="ph ph-copy"></i> Copiar
@@ -188,9 +188,9 @@ function renderRSATab(rsaData) {
           </div>
           
           <!-- d (Exponente Privado) -->
-          <div style="background:#16213e; padding:12px; border-radius:6px; border:1px solid #2d2d3d;">
+          <div style="background:#fff; padding:12px; border-radius:6px; border:1px solid #e9ecef;">
             <div style="font-size:10px; color:#888; margin-bottom:5px;">d (Exponente Privado)</div>
-            <div id="rsa-d-value" style="font-family:monospace; font-size:9px; color:#f64e60; word-break:break-all; max-height:60px; overflow:auto;">N/A</div>
+            <div id="rsa-d-value" style="font-family:monospace; font-size:9px; color:#c0392b; word-break:break-all; max-height:60px; overflow:auto;">Haz clic en Extraer</div>
             <button onclick="copyToClipboard(document.getElementById('rsa-d-value').textContent)" class="copy-btn" style="margin-top:8px; font-size:9px; padding:3px 6px;">
               <i class="ph ph-copy"></i> Copiar
             </button>
@@ -199,17 +199,17 @@ function renderRSATab(rsaData) {
         
         <!-- Valores decimales colapsables -->
         <details style="margin-top:12px;">
-          <summary style="cursor:pointer; font-size:11px; color:#888;">
+          <summary style="cursor:pointer; font-size:11px; color:#666;">
             <i class="ph ph-caret-right"></i> Ver valores decimales completos
           </summary>
           <div style="margin-top:8px; display:grid; gap:8px;">
-            <div style="background:#16213e; padding:8px; border-radius:4px;">
-              <div style="font-size:9px; color:#666;">N (Decimal):</div>
-              <div id="rsa-n-decimal" style="font-family:monospace; font-size:8px; color:#50cd89; word-break:break-all; max-height:50px; overflow:auto;">Haz clic en "Extraer"</div>
+            <div style="background:#fff; padding:8px; border-radius:4px; border:1px solid #e9ecef;">
+              <div style="font-size:9px; color:#888;">N (Decimal):</div>
+              <div id="rsa-n-decimal" style="font-family:monospace; font-size:8px; color:#333; word-break:break-all; max-height:50px; overflow:auto;">Haz clic en "Extraer"</div>
             </div>
-            <div style="background:#16213e; padding:8px; border-radius:4px;">
-              <div style="font-size:9px; color:#666;">d (Decimal):</div>
-              <div id="rsa-d-decimal" style="font-family:monospace; font-size:8px; color:#f64e60; word-break:break-all; max-height:50px; overflow:auto;">Requiere clave privada</div>
+            <div style="background:#fff; padding:8px; border-radius:4px; border:1px solid #e9ecef;">
+              <div style="font-size:9px; color:#888;">d (Decimal):</div>
+              <div id="rsa-d-decimal" style="font-family:monospace; font-size:8px; color:#c0392b; word-break:break-all; max-height:50px; overflow:auto;">Requiere clave privada</div>
             </div>
           </div>
         </details>
