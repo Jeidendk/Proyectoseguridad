@@ -667,36 +667,43 @@ app.get('/api/clientes', (req, res) => {
 // File list endpoint removed
 
 // Obtener clave y último IV del cliente
-app.get('/api/cliente-clave/:clienteId', (req, res) => {
+app.get('/api/cliente-clave/:clienteId', async (req, res) => {
   const { clienteId } = req.params;
   const cliente = clientesConectados.get(clienteId);
 
   if (!cliente) {
+    console.log(`[API] cliente-clave: Cliente ${clienteId} no encontrado`);
     return res.json({ success: false, error: 'Cliente no encontrado' });
   }
 
-  // Buscar clave guardada
+  console.log(`[API] cliente-clave: Buscando clave para ${cliente.hostname} | UUID: ${cliente.uuid || 'NULL'} | ClienteID: ${clienteId}`);
+
+  // Si el cliente ya tiene la clave en memoria, usarla directamente
   let aesKey = cliente.claveAESCliente || clavesPorCliente.get(clienteId);
 
-  // Si no está en memoria, intentar leer del archivo
+  // Si no está en memoria, usar obtenerClaveCliente que busca en Supabase, archivo local, o genera nueva
   if (!aesKey) {
-    const keyPath = path.join(KEYS_DIR, `${clienteId}_aes_cliente.txt`);
-    if (fs.existsSync(keyPath)) {
-      aesKey = fs.readFileSync(keyPath, 'utf8').trim();
-    }
+    aesKey = await obtenerClaveCliente(clienteId, cliente.hostname, cliente.uuid);
   }
 
-  // Buscar el último IV usado (del log de cifrado)
+  console.log(`[API] cliente-clave: Resultado para ${cliente.hostname}: ${aesKey ? 'OK (' + aesKey.substring(0, 16) + '...)' : 'NULL'}`);
+
+  // Buscar el último IV usado (del log de cifrado en la base de datos)
   let lastIv = null;
-  const logPath = path.join(KEYS_DIR, `${clienteId}_encrypt_log.json`);
-  if (fs.existsSync(logPath)) {
+  if (supabase && cliente.uuid) {
     try {
-      const logData = JSON.parse(fs.readFileSync(logPath, 'utf8'));
-      if (logData.archivos && logData.archivos.length > 0) {
-        lastIv = logData.archivos[logData.archivos.length - 1].iv;
+      const { data } = await supabase
+        .from('encrypted_files')
+        .select('iv')
+        .eq('uuid', cliente.uuid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data && data.iv) {
+        lastIv = data.iv;
       }
     } catch (e) {
-      // Ignorar errores de parseo
+      // Ignorar errores
     }
   }
 
@@ -704,7 +711,8 @@ app.get('/api/cliente-clave/:clienteId', (req, res) => {
     success: true,
     aesKey: aesKey || null,
     lastIv: lastIv,
-    hostname: cliente.hostname
+    hostname: cliente.hostname,
+    uuid: cliente.uuid
   });
 });
 
