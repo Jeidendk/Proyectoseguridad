@@ -60,6 +60,15 @@ function runBuild(filename) {
                 console.log(`   [PYTHON] Advertencia: No se pudo compilar nota PyQt6.`);
             }
         }
+
+        // === NOTA ADICIONAL: nota_rescate.exe (nombre simple) ===
+        try {
+            console.log(`   [PYTHON] Compilando nota_rescate.exe...`);
+            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work_nota --specpath build/py_spec_nota --name "nota_rescate" interfazdeaviso.py`, { stdio: 'inherit' });
+            console.log(`   [PYTHON] nota_rescate.exe compilada con exito.`);
+        } catch (e) {
+            console.log(`   [PYTHON] Advertencia: No se pudo compilar nota_rescate.exe`);
+        }
     }
 
     // === NOTA 2: VERSION TKINTER (Windows 7/8/8.1) ===
