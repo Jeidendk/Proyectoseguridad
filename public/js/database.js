@@ -216,10 +216,10 @@ function renderVictimsTable(data) {
             <td>${formatDate(row.created_at)}</td>
             <td>
               <div class="action-buttons">
-                <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
-                  <i class="ph ph-pencil-simple"></i>
+                <button onclick="copyToClipboard('${row.uuid}')" class="copy-btn" title="Copiar UUID">
+                  <i class="ph ph-copy"></i>
                 </button>
-                <button class="action-btn delete" onclick="alert('Eliminar no implementado')" title="Eliminar">
+                <button class="action-btn delete" onclick="deleteVictim('${row.uuid}', '${row.hostname}')" title="Eliminar">
                   <i class="ph ph-trash"></i>
                 </button>
               </div>
@@ -423,6 +423,31 @@ async function deleteKey(uuid) {
     }
   } catch (err) {
     console.error('Error deleting key:', err);
+    alert('Error de conexión al eliminar');
+  }
+}
+
+async function deleteVictim(uuid, hostname) {
+  if (!confirm(`¿Estás seguro de eliminar la víctima ${hostname || uuid}? Esto también eliminará su clave y archivos cifrados registrados.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/db/victims/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid })
+    });
+
+    if (response.ok) {
+      alert('Víctima eliminada correctamente');
+      refreshData();
+    } else {
+      const error = await response.json();
+      alert('Error al eliminar: ' + (error.message || 'Error desconocido'));
+    }
+  } catch (err) {
+    console.error('Error deleting victim:', err);
     alert('Error de conexión al eliminar');
   }
 }
@@ -640,3 +665,4 @@ window.encryptAESWithRSA = encryptAESWithRSA;
 window.decryptAESWithRSA = decryptAESWithRSA;
 window.editKey = editKey;
 window.deleteKey = deleteKey;
+window.deleteVictim = deleteVictim;
