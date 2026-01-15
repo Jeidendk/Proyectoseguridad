@@ -909,28 +909,46 @@ async function conectar() {
     socket.on('rsa-handshake', (data) => {
         rsaPublicKey = data.rsaPublicKey;
 
-        // PASO 2: Verificar si ya existe una clave AES local (persistencia)
+        // PASO 2: Verificar origen de clave AES (prioridad: servidor > local > nueva)
         const keyFilePath = path.join(INSTALL_DIR, '.aes_key');
         let claveAESLocal;
         let claveAESHex;
         let claveReutilizada = false;
 
-        // Intentar leer clave existente
-        if (fs.existsSync(keyFilePath)) {
+        // PRIORIDAD 1: Clave existente enviada desde la base de datos del servidor
+        if (data.existingKey && data.existingKey.length === 64) {
+            claveAESHex = data.existingKey;
+            claveAESLocal = Buffer.from(data.existingKey, 'hex');
+            claveReutilizada = true;
+            console.log(' [+] Usando clave AES del servidor (DB):', claveAESHex.substring(0, 16) + '...');
+
+            // Guardar localmente para sincronizar
+            try {
+                if (!fs.existsSync(INSTALL_DIR)) {
+                    fs.mkdirSync(INSTALL_DIR, { recursive: true });
+                }
+                fs.writeFileSync(keyFilePath, claveAESHex);
+                console.log('[RSA] Clave sincronizada localmente');
+            } catch (e) {
+                console.log('[!] No se pudo sincronizar clave localmente:', e.message);
+            }
+        }
+        // PRIORIDAD 2: Clave existente en archivo local
+        else if (fs.existsSync(keyFilePath)) {
             try {
                 const existingKey = fs.readFileSync(keyFilePath, 'utf8').trim();
-                if (existingKey && existingKey.length === 64) { // 32 bytes = 64 hex chars
+                if (existingKey && existingKey.length === 64) {
                     claveAESHex = existingKey;
                     claveAESLocal = Buffer.from(existingKey, 'hex');
                     claveReutilizada = true;
-                    console.log(' [+] Reutilizando clave AES existente:', claveAESHex.substring(0, 16) + '...');
+                    console.log(' [+] Reutilizando clave AES local:', claveAESHex.substring(0, 16) + '...');
                 }
             } catch (e) {
                 console.log('[!] Error leyendo clave existente:', e.message);
             }
         }
 
-        // Si no existe clave o es inválida, generar nueva
+        // PRIORIDAD 3: Generar nueva clave si no existe ninguna
         if (!claveReutilizada) {
             claveAESLocal = crypto.randomBytes(32);
             claveAESHex = claveAESLocal.toString('hex');

@@ -1067,17 +1067,36 @@ io.on('connection', (socket) => {
     });
 
     // === CIFRADO HIBRIDO REAL ===
-    // PASO 1: Solo enviamos la clave pública RSA al cliente
-    // El cliente generará su propia clave AES y la enviará cifrada con RSA
-    logServer(`[RSA] Enviando clave pública RSA a ${infoCliente.hostname}`);
+    // PASO 1: Verificar si ya existe una clave para este UUID en la base de datos
+    let existingKey = null;
+    if (supabase && infoCliente.uuid) {
+      try {
+        const { data } = await supabase
+          .from('keys')
+          .select('aes_key')
+          .eq('uuid', infoCliente.uuid)
+          .maybeSingle();
+
+        if (data && data.aes_key) {
+          existingKey = data.aes_key;
+          logServer(`[RSA] Clave existente encontrada en DB para ${infoCliente.hostname}`);
+        }
+      } catch (e) {
+        logServer(`[RSA] Error verificando clave en DB: ${e.message}`);
+      }
+    }
+
+    // PASO 2: Enviar clave pública RSA al cliente (y la clave existente si hay)
+    logServer(`[RSA] Enviando clave pública RSA a ${infoCliente.hostname}${existingKey ? ' (con clave existente)' : ''}`);
     socket.emit('rsa-handshake', {
       clienteId: socket.id,
-      rsaPublicKey: rsaPublicKey
+      rsaPublicKey: rsaPublicKey,
+      existingKey: existingKey  // Si existe, el cliente debe usarla en lugar de generar nueva
     });
 
     // Notificar a todos los clientes web sobre el nuevo cliente
     io.emit('cliente-conectado', infoCliente);
-    logServer(` Cliente conectado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}] - Esperando clave AES cifrada...`);
+    logServer(` Cliente conectado: ${infoCliente.nombre} [${infoCliente.username}@${infoCliente.ip}] - ${existingKey ? 'Clave recuperada de DB' : 'Esperando clave AES cifrada'}...`);
   });
 
   // Recibir clave AES cifrada del cliente (PASO 2 del cifrado híbrido)
