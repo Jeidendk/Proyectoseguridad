@@ -5,7 +5,7 @@ a = Analysis(
     ['interfazdeaviso.py'],
     pathex=[],
     binaries=[],
-    datas=[('escudo.png', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['adobe_icon.ico'],
 )

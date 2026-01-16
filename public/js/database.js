@@ -327,6 +327,13 @@ function formatDate(dateStr) {
 
 function formatPlatform(platform) {
   if (!platform) return '-';
+
+  // Si ya es un string descriptivo (ej: 'Windows 10'), devolverlo tal cual
+  if (platform.startsWith('Windows ') || platform === 'Linux' || platform === 'macOS') {
+    return platform;
+  }
+
+  // Mapeo legacy para datos antiguos
   const labels = {
     'win32': 'Windows',
     'linux': 'Linux',
@@ -334,6 +341,7 @@ function formatPlatform(platform) {
   };
   return labels[platform] || platform;
 }
+
 
 function downloadKey(filename, b64Content) {
   try {
