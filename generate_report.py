@@ -6,8 +6,8 @@ import re
 
 # Constantes
 TEMPLATE_FILE = 'plantilla-titulos-normas-apa-7-mentur (15).docx'
-MARKDOWN_FILE = 'INFORME_ACADEMICO.md'
-OUTPUT_FILE = 'INFORME_ACADEMICO_FINAL_v3.docx'
+MARKDOWN_FILE = 'PROYECTO_SEGURIDAD.md'
+OUTPUT_FILE = 'PROYECTO_SEGURIDAD.docx'
 
 def safe_add_paragraph(doc, text, style_name):
     try:

